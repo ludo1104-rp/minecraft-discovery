@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minecraft Discovery — le défi des 10 blocs</title>
+<meta name="description" content="Mini-jeu pédagogique : réponds à 10 questions de culture générale sur Minecraft pour rallumer la Balise du savoir.">
+<meta name="theme-color" content="#1e1e22">
+<style>
+/* =========================================================
+   MINECRAFT DISCOVERY — feuille de style
+   Tout est dessiné en CSS + textures générées en JavaScript :
+   aucune image ni police externe, le jeu fonctionne hors ligne.
+   ========================================================= */
+@property --sky-top { syntax: '<color>'; inherits: true; initial-value: #7cc4ff; }
+@property --sky-bot { syntax: '<color>'; inherits: true; initial-value: #d6f0ff; }
+
+:root {
+  --ink: #1d1d1f;
+  --gui: #c6c6c6;
+  --slate: #2c2c31;
+  --focus: #ffde3b;
+  --ok: #2e7d32;
+  --ko: #a3291f;
+  --gold: #ffd23f;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-pixel: "Courier New", Courier, ui-monospace, monospace;
+  --bevel: inset 4px 4px 0 rgba(255,255,255,.28), inset -4px -5px 0 rgba(0,0,0,.38);
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: var(--font-ui);
+  color: #f4f4f4;
+  background-color: #2a1c10;
+  background-image: linear-gradient(rgba(14,8,4,.66), rgba(14,8,4,.66)), var(--tex-dirt, none);
+  background-size: auto, 64px 64px;
+  image-rendering: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.pix { image-rendering: pixelated; image-rendering: crisp-edges; }
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+button { font: inherit; }
+
+/* ---------- Éléments communs ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 56px; padding: 12px 24px;
+  font-weight: 900; font-size: 1.15rem; letter-spacing: .02em;
+  color: #fff; background: #3f8a24;
+  border: 4px solid #000; border-radius: 0;
+  box-shadow: var(--bevel);
+  cursor: pointer; text-shadow: 2px 2px 0 rgba(0,0,0,.35);
+  transition: transform .08s, filter .15s;
+}
+.btn:hover { filter: brightness(1.12); }
+.btn:active { transform: translateY(3px); box-shadow: inset 4px 4px 0 rgba(0,0,0,.25), inset -2px -2px 0 rgba(255,255,255,.2); }
+.btn.big { min-height: 66px; font-size: 1.3rem; padding: 14px 32px; }
+.btn.stone { background: #6f6f76; }
+.icon-btn {
+  width: 46px; height: 46px; display: inline-grid; place-items: center;
+  background: #55555c; color: #fff; border: 3px solid #000; box-shadow: var(--bevel);
+  cursor: pointer; padding: 0;
+}
+.icon-btn:active { transform: translateY(2px); }
+.icon-btn svg { width: 24px; height: 24px; }
+.icon-btn[aria-pressed="true"] { background: #3f8a24; }
+.sound-btn .waves { display: none; }
+.sound-btn[aria-pressed="true"] .waves { display: inline; }
+.sound-btn[aria-pressed="true"] .mute { display: none; }
+.sound-text { display: none; }
+
+/* ---------- Le monde (scène pixel art) ---------- */
+.world {
+  --t: 26px;
+  --ground: calc(var(--t) * 1.6);
+  --night: 0;
+  position: relative; overflow: hidden;
+  background: linear-gradient(var(--sky-top), var(--sky-bot));
+  transition: --sky-top 1.2s, --sky-bot 1.2s;
+  border: 4px solid #000;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,.18);
+}
+.w-stars {
+  position: absolute; inset: 0 0 var(--ground) 0; opacity: var(--night);
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 32% 8%, #fff 50%, transparent 51%),
+    radial-gradient(3px 3px at 58% 22%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 76% 10%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 88% 30%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 22% 38%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 45% 40%, #fff 50%, transparent 51%),
+    radial-gradient(3px 3px at 6% 48%, #fff 50%, transparent 51%),
+    radial-gradient(2px 2px at 94% 52%, #fff 50%, transparent 51%);
+  transition: opacity 1.2s;
+}
+.w-sun, .w-moon {
+  position: absolute; width: calc(var(--t) * 1.3); height: calc(var(--t) * 1.3);
+  transform: translate(-50%, -50%);
+  transition: left 1.2s, top 1.2s, opacity 1.2s;
+}
+.w-sun {
+  background: #fff3a6;
+  box-shadow: 0 0 0 calc(var(--t) * .18) rgba(255,243,166,.45), 0 0 calc(var(--t) * 1.4) rgba(255,224,110,.75);
+}
+.w-moon {
+  left: 80%; top: 16%; opacity: 0;
+  background: #e8ecf5;
+  box-shadow: inset calc(var(--t) * -.25) calc(var(--t) * -.2) 0 #c4cada, 0 0 calc(var(--t) * .9) rgba(220,228,255,.45);
+}
+.w-cloud {
+  position: absolute; height: calc(var(--t) * .55); width: calc(var(--t) * 3);
+  background: rgba(255,255,255,.88);
+  box-shadow: calc(var(--t) * .6) calc(var(--t) * -.45) 0 rgba(255,255,255,.88);
+  opacity: calc(1 - var(--night) * .7);
+  animation: drift 70s linear infinite;
+}
+.w-cloud::after {
+  content: ""; position: absolute; left: calc(var(--t) * .6); top: calc(var(--t) * -.45);
+  width: calc(var(--t) * 1.5); height: calc(var(--t) * .55); background: inherit;
+}
+.w-cloud.c1 { left: 6%; top: 14%; }
+.w-cloud.c2 { left: 52%; top: 28%; width: calc(var(--t) * 2.2); animation-duration: 95s; animation-delay: -30s; }
+.w-cloud.c3 { left: 78%; top: 8%; width: calc(var(--t) * 2.6); animation-duration: 120s; animation-delay: -60s; }
+@keyframes drift { from { transform: translateX(-30vw); } to { transform: translateX(60vw); } }
+
+.w-hills {
+  position: absolute; left: 0; right: 0; bottom: var(--ground); height: calc(var(--t) * 2.8);
+  background-color: transparent;
+  background-image: var(--tex-hills, linear-gradient(transparent 55%, #3f7a2d 55%));
+  background-size: auto 100%; background-repeat: repeat-x;
+  filter: brightness(calc(1 - var(--night) * .55));
+  image-rendering: pixelated;
+}
+.w-ground {
+  position: absolute; left: 0; right: 0; bottom: 0; height: var(--ground);
+  background-color: #7a552f;
+  background-image: var(--tex-grass-side, linear-gradient(#5fa83a 22%, transparent 22%)), var(--tex-dirt, none);
+  background-size: var(--t) var(--t);
+  background-repeat: repeat-x, repeat;
+  background-position: 0 0, 0 0;
+  border-top: 2px solid rgba(0,0,0,.25);
+  filter: brightness(calc(1 - var(--night) * .5));
+  image-rendering: pixelated;
+}
+.w-pyr {
+  position: absolute; left: 54%; bottom: var(--ground);
+  width: calc(var(--t) * 4); height: calc(var(--t) * 5);
+  transform: translateX(-50%);
+}
+.slot, .beacon {
+  position: absolute; width: var(--t); height: var(--t);
+  left: calc(var(--t) * var(--x)); bottom: calc(var(--t) * var(--y));
+}
+.slot.empty {
+  background: rgba(255,255,255,.12);
+  outline: 2px dashed rgba(255,255,255,.7); outline-offset: -3px;
+}
+.slot.current { animation: pulse 1.1s ease-in-out infinite; background: rgba(255,222,59,.25); outline-color: var(--focus); outline-style: solid; }
+@keyframes pulse { 50% { background: rgba(255,222,59,.5); } }
+.slot.filled {
+  background-size: 100% 100%; image-rendering: pixelated;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), inset 0 calc(var(--t) * .08) 0 rgba(255,255,255,.18);
+  filter: brightness(calc(1 - var(--night) * .32));
+}
+.slot.drop { animation: drop .5s cubic-bezier(.3,1.5,.6,1) both; }
+@keyframes drop { from { transform: translateY(calc(var(--t) * -3)); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
+.beacon {
+  --glow: 0;
+  background-color: #1a2b33;
+  background-image: var(--tex-beacon, none);
+  background-size: 100% 100%; image-rendering: pixelated;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5);
+}
+.beacon::after {
+  content: ""; position: absolute; inset: 30%;
+  background: rgb(150, 255, 245);
+  opacity: calc(.12 + var(--glow) * .88);
+  box-shadow: 0 0 calc(var(--t) * var(--glow) * .9) calc(var(--t) * var(--glow) * .25) rgba(150,255,245,.85);
+  transition: opacity .8s, box-shadow .8s;
+}
+.w-beam {
+  position: absolute; left: calc(var(--t) * 1.72); width: calc(var(--t) * .56);
+  bottom: calc(var(--t) * 5); height: 3000px;
+  background: linear-gradient(to top, rgba(170,255,250,.95), rgba(170,255,250,.25) 40%, rgba(170,255,250,.06));
+  transform-origin: bottom; transform: scaleY(0);
+  opacity: var(--beam-op, 1);
+  box-shadow: 0 0 calc(var(--t) * .6) rgba(170,255,250,.5);
+  transition: transform 1.6s cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+}
+.w-beam.lit { transform: scaleY(1); }
+.w-hero {
+  position: absolute; bottom: var(--ground); left: calc(54% - var(--t) * 3.5);
+  width: calc(var(--t) * .92); height: calc(var(--t) * 1.61);
+  background-image: var(--tex-hero, none); background-color: transparent;
+  background-size: 100% 100%; image-rendering: pixelated;
+  filter: brightness(calc(1 - var(--night) * .45));
+  animation: idle 2.4s ease-in-out infinite;
+}
+.w-hero.jump { animation: jump .55s ease-out; }
+@keyframes idle { 50% { transform: translateY(-2px); } }
+@keyframes jump { 35% { transform: translateY(calc(var(--t) * -.9)); } 70% { transform: translateY(0) scaleY(.92); } }
+.spark {
+  position: absolute; width: calc(var(--t) * .2); height: calc(var(--t) * .2);
+  background: var(--c, #fff); pointer-events: none;
+  animation: spark .7s ease-out forwards;
+}
+@keyframes spark { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+
+/* ---------- Écran d'accueil ---------- */
+#screen-start {
+  position: relative; min-height: 100vh; min-height: 100dvh;
+  display: grid; place-items: center; padding: 28px 14px;
+}
+#screen-start .world { position: absolute; inset: 0; border: 0; --t: 34px; }
+#screen-start .w-pyr { left: 76%; }
+#screen-start .w-hero { left: calc(76% - var(--t) * 3.4); }
+.start-panel {
+  position: relative; z-index: 2; width: 100%; max-width: 640px;
+  background: rgba(36,36,42,.93);
+  border: 4px solid #000; box-shadow: var(--bevel), 0 12px 0 rgba(0,0,0,.35);
+  padding: 26px 22px 20px; text-align: center;
+}
+.cube-row { display: flex; justify-content: center; gap: 14px; margin-bottom: 6px; }
+.cube-row img { width: 54px; height: auto; animation: bob 2.6s ease-in-out infinite; }
+.cube-row img:nth-child(2) { animation-delay: -.8s; width: 64px; }
+.cube-row img:nth-child(3) { animation-delay: -1.6s; }
+@keyframes bob { 50% { transform: translateY(-8px); } }
+.title {
+  margin: 4px 0 0; font-family: var(--font-pixel); font-weight: 900;
+  line-height: .95; letter-spacing: .04em; text-transform: uppercase;
+}
+.title .l1 {
+  display: block; font-size: clamp(2.2rem, 9vw, 3.6rem); color: #d9d9d9;
+  filter: drop-shadow(4px 4px 0 #111);
+}
+.tex-ok .title .l1 {
+  background-image: var(--tex-cobble-light); background-size: 32px 32px;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.title .l2 {
+  display: block; margin-top: 6px; font-size: clamp(1.5rem, 6vw, 2.4rem);
+  color: var(--gold); filter: drop-shadow(3px 3px 0 #5a3a00);
+}
+.subtitle {
+  display: inline-block; margin: 14px 0 0; padding: 6px 14px;
+  background: #3f8a24; border: 3px solid #000; box-shadow: var(--bevel);
+  font-weight: 900; font-size: 1.1rem;
+}
+.story { font-size: 1.08rem; line-height: 1.55; margin: 18px auto 14px; max-width: 34em; }
+.rules {
+  list-style: none; padding: 0; margin: 0 auto 20px; display: grid; gap: 8px; max-width: 32em; text-align: left;
+}
+.rules li {
+  display: flex; gap: 12px; align-items: center;
+  background: rgba(255,255,255,.07); border: 2px solid rgba(0,0,0,.6); padding: 8px 12px;
+  font-size: 1rem; line-height: 1.35;
+}
+.rules img { width: 34px; flex: none; }
+.start-actions { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.start-actions .sound-btn { width: auto; padding: 0 14px; gap: 8px; display: inline-flex; align-items: center; min-height: 56px; font-weight: 700; }
+.start-actions .sound-text { display: inline; }
+.disclaimer { margin: 18px 0 0; font-size: .82rem; color: #c9c9c9; }
+
+/* ---------- Écran de jeu ---------- */
+#screen-game {
+  min-height: 100vh; min-height: 100dvh;
+  display: grid; grid-template-rows: auto 1fr auto;
+}
+.hud {
+  position: sticky; top: 0; z-index: 10;
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center;
+  padding: 8px 12px; background: #1e1e22;
+  border-bottom: 4px solid #000; box-shadow: inset 0 -3px 0 #3c3c44;
+}
+.progress-label { font-weight: 900; font-size: 1rem; margin-bottom: 5px; display: flex; gap: 8px; align-items: center; }
+.streak {
+  font-size: .8rem; font-weight: 900; color: #2a1600; background: #ffb43a;
+  border: 2px solid #000; padding: 1px 7px;
+}
+.xpbar { height: 14px; background: #111; border: 3px solid #000; box-shadow: inset 0 0 0 1px #444; }
+.xpfill {
+  height: 100%; width: 0%;
+  background: linear-gradient(#a5f25a, #6cc12f 60%, #4f9a1f);
+  transition: width .5s;
+}
+.scorebox {
+  text-align: right; min-width: 84px; padding: 3px 10px;
+  background: #000; border: 3px solid #4a4a52; position: relative;
+}
+.scorebox small { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: #bdbdbd; }
+.scorebox strong { font-family: var(--font-pixel); font-size: 1.35rem; color: var(--gold); display: block; }
+.scorebox.bump strong { animation: bump .45s; }
+@keyframes bump { 40% { transform: scale(1.25); } }
+.float-pts {
+  position: absolute; right: 6px; top: 100%; font-family: var(--font-pixel); font-weight: 900;
+  color: #a5f25a; text-shadow: 2px 2px 0 #000; font-size: 1.2rem; pointer-events: none;
+  animation: floatUp 1.1s ease-out forwards;
+}
+@keyframes floatUp { from { transform: translateY(14px); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-4px); opacity: 0; } }
+
+.game-main {
+  display: grid; grid-template-columns: 1fr; gap: 12px;
+  width: 100%; max-width: 1240px; margin: 0 auto; padding: 12px;
+  align-content: start; padding-bottom: 28px;
+}
+.game-main .world { height: clamp(165px, 27vh, 230px); --t: 24px; }
+.quest { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card {
+  background: var(--gui); color: var(--ink);
+  border: 4px solid #000; box-shadow: inset 4px 4px 0 #fff, inset -4px -4px 0 #555;
+  padding: 16px;
+}
+.card.enter { animation: enter .35s ease-out; }
+@keyframes enter { from { transform: translateY(10px); opacity: 0; } }
+.card.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 800; font-size: .86rem; padding: 4px 10px;
+  color: #fff; background: #5b5b62;
+  border: 2px solid #000; box-shadow: inset 2px 2px 0 rgba(255,255,255,.3), inset -2px -2px 0 rgba(0,0,0,.35);
+}
+.chip img { width: 22px; height: auto; margin: -4px 0; }
+.chip.facile { background: #2f6f22; }
+.chip.moyen { background: #8a5300; }
+.chip.defi { background: #6d2a8a; }
+.chip.reward { background: #e9e9e9; color: var(--ink); }
+.question {
+  font-size: clamp(1.22rem, 1.2vw + .95rem, 1.7rem); line-height: 1.28;
+  margin: 14px 0 12px; font-weight: 800;
+}
+.question:focus { outline: none; }
+.question:focus-visible { outline: 3px dashed #555; outline-offset: 4px; }
+.torch { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: .9rem; margin-bottom: 14px; }
+.torch-icon { width: 12px; height: 26px; position: relative; flex: none; }
+.torch-icon::before { content: ""; position: absolute; left: 3px; bottom: 0; width: 6px; height: 16px; background: #7a5226; box-shadow: inset -2px 0 0 #5a3a18; }
+.torch-icon::after { content: ""; position: absolute; left: 2px; top: 0; width: 8px; height: 10px; background: #ffd23f; box-shadow: inset 0 -4px 0 #ff8a1a, 0 0 8px #ffbf3a; }
+.torch.out .torch-icon::after { background: #777; box-shadow: none; }
+.torch-bar { flex: 1; height: 16px; background: #3b3b3b; border: 3px solid #000; overflow: hidden; }
+.torch-fill {
+  height: 100%; width: 100%; transform-origin: left; transform: scaleX(1);
+  background: repeating-linear-gradient(90deg, #ffd23f 0 12px, #ffa51f 12px 24px);
+}
+.torch-label { min-width: 9.5em; }
+.answers { display: grid; grid-template-columns: 1fr; gap: 16px 12px; padding-top: 4px; }
+.ans {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  min-height: 66px; width: 100%; padding: 10px 14px; text-align: left;
+  font-size: 1.08rem; font-weight: 800; line-height: 1.25;
+  color: #fff; border: 4px solid #000; border-radius: 0;
+  box-shadow: var(--bevel); cursor: pointer;
+  transition: transform .08s, filter .15s, opacity .3s;
+}
+.ans:hover:not(:disabled) { filter: brightness(1.12); }
+.ans:active:not(:disabled) { transform: translateY(3px); }
+.ans:disabled { cursor: default; }
+.ans .shape {
+  flex: none; width: 38px; height: 38px; display: grid; place-items: center;
+  background: rgba(0,0,0,.28); border: 2px solid rgba(0,0,0,.5); font-size: 1.15rem;
+}
+.ans .ans-text { flex: 1; }
+.ans .key {
+  display: none; position: absolute; top: 3px; right: 6px; font-size: .72rem; font-weight: 900; opacity: .75;
+}
+.a-wood { background: #86562a; }
+.a-lapis { background: #2f55a4; }
+.a-gold { background: #f0c235; color: #2a1d00; }
+.a-ame { background: #74479f; }
+.ans .mark {
+  position: absolute; top: -14px; right: 10px; z-index: 1;
+  font-size: .8rem; font-weight: 900; padding: 2px 8px;
+  background: #fff; color: #000; border: 2px solid #000; white-space: nowrap;
+}
+.ans.is-correct { background: var(--ok); color: #fff; }
+.ans.is-wrong { background: var(--ko); color: #fff; }
+.ans.is-dim { opacity: .6; filter: grayscale(.7); }
+.ans.is-correct .key, .ans.is-wrong .key, .ans.is-dim .key { display: none; }
+.kbd-hint { display: none; margin: 12px 0 0; font-size: .86rem; color: #444; }
+@media (hover: hover) and (pointer: fine) { .kbd-hint, .ans .key { display: block; } }
+
+.feedback {
+  background: var(--slate); color: #f4f4f4;
+  border: 4px solid #000; box-shadow: var(--bevel);
+  padding: 16px; animation: enter .35s ease-out;
+}
+.fb-head { display: flex; align-items: center; gap: 14px; }
+.fb-cube { width: 62px; flex: none; }
+.fb-cube.fallback { height: 62px; border: 3px solid #000; }
+.fb-verdict { margin: 0; font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 3px solid #000; font-size: 1.05rem; color: #fff; flex: none; }
+.badge.ok { background: var(--ok); }
+.badge.ko { background: var(--ko); }
+.fb-block { margin: 4px 0 0; color: #d6d6d6; font-size: .96rem; }
+.fb-points {
+  margin-left: auto; font-family: var(--font-pixel); font-weight: 900; font-size: 1.7rem;
+  color: var(--gold); text-shadow: 2px 2px 0 #000; white-space: nowrap;
+}
+.fb-points.zero { color: #bdbdbd; }
+.fb-answer { margin: 14px 0 0; font-weight: 800; }
+.fb-explain { margin: 10px 0 0; font-size: 1.03rem; line-height: 1.55; }
+.fb-explain strong { color: #a5f25a; }
+.breakdown { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.breakdown li { font-size: .88rem; font-weight: 800; padding: 4px 10px; background: #000; border: 2px solid #4a4a52; }
+.breakdown b { color: var(--gold); }
+.fb-actions { margin-top: 16px; display: flex; justify-content: flex-end; }
+#btn-next { scroll-margin-bottom: 120px; }
+
+.hotbar-wrap {
+  position: sticky; bottom: 0; z-index: 9;
+  display: flex; justify-content: center; padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(0,0,0,.72); border-top: 3px solid #000;
+}
+.hotbar {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(10, 1fr);
+  width: min(100%, 560px); background: #000; border: 3px solid #000;
+}
+.hb-slot {
+  position: relative; aspect-ratio: 1 / 1; display: grid; place-items: center;
+  background: #8b8b8b; box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #e6e6e6;
+}
+.hb-slot img { width: 76%; height: auto; }
+.hb-slot .fallback { width: 64%; height: 64%; border: 2px solid #000; }
+.hb-slot .n {
+  position: absolute; right: 3px; bottom: 1px; font-weight: 900; font-size: .72rem;
+  color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000;
+}
+.hb-slot .n.ok { color: #a5f25a; }
+.hb-slot .n.ko { color: #ff8f80; }
+.hb-slot.current { outline: 4px solid #fff; outline-offset: -1px; z-index: 1; box-shadow: inset 3px 3px 0 #373737, inset -3px -3px 0 #e6e6e6, 0 0 0 2px #000; }
+.hb-slot.pop img { animation: pop .45s cubic-bezier(.3,1.6,.6,1); }
+@keyframes pop { from { transform: scale(.2); } }
+
+@media (min-width: 600px) {
+  .answers { grid-template-columns: 1fr 1fr; }
+  .card, .feedback { padding: 20px; }
+}
+@media (min-width: 920px) {
+  .game-main { grid-template-columns: minmax(320px, .82fr) 1.18fr; gap: 16px; padding: 16px; align-items: start; }
+  .game-main .world { height: min(560px, calc(100dvh - 210px)); min-height: 430px; --t: 46px; position: sticky; top: 84px; }
+  .ans { min-height: 82px; font-size: 1.12rem; }
+}
+@media (max-width: 400px) {
+  .scorebox { min-width: 70px; padding: 2px 6px; }
+  .scorebox strong { font-size: 1.1rem; }
+  .icon-btn { width: 42px; height: 42px; }
+  .hud { gap: 7px; padding: 8px; }
+  .fb-points { font-size: 1.35rem; }
+  .fb-cube { width: 48px; }
+}
+
+/* ---------- Écran final ---------- */
+#screen-end { min-height: 100vh; min-height: 100dvh; padding: 0 0 40px; }
+#screen-end .world { height: clamp(250px, 42vh, 380px); --t: 36px; border-left: 0; border-right: 0; border-top: 0; }
+#screen-end .w-pyr { left: 50%; }
+#screen-end .w-hero { left: calc(50% - var(--t) * 3.4); }
+.result {
+  position: relative; z-index: 2; width: calc(100% - 24px); max-width: 860px;
+  margin: -36px auto 0; padding: 22px 18px;
+  background: var(--slate); border: 4px solid #000; box-shadow: var(--bevel), 0 10px 0 rgba(0,0,0,.35);
+}
+.eyebrow { margin: 0; text-align: center; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; font-size: .85rem; color: #a5f25a; }
+.end-title {
+  margin: 6px 0 4px; text-align: center; font-family: var(--font-pixel); font-weight: 900;
+  font-size: clamp(1.8rem, 6vw, 2.8rem); color: var(--gold); text-shadow: 3px 3px 0 #000; line-height: 1.05;
+}
+.end-title:focus { outline: none; }
+.end-title:focus-visible { outline: 3px dashed var(--focus); outline-offset: 6px; }
+.end-power { text-align: center; margin: 4px 0 18px; font-weight: 700; color: #cfefff; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat {
+  text-align: center; background: #000; border: 3px solid #4a4a52; padding: 10px 6px;
+}
+.stat span { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; color: #c9c9c9; font-weight: 700; }
+.stat strong { display: block; font-family: var(--font-pixel); font-size: clamp(1.3rem, 5vw, 2rem); color: #fff; margin-top: 4px; }
+.stat.main strong { color: var(--gold); }
+.end-msg { font-size: 1.08rem; line-height: 1.55; text-align: center; margin: 18px auto; max-width: 36em; }
+.end-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.end-blocks { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin: 0 0 6px; padding: 0; list-style: none; }
+.end-blocks img { width: 34px; }
+.recap-title { margin: 28px 0 10px; font-size: 1.25rem; }
+.recap { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.recap details { background: rgba(255,255,255,.06); border: 2px solid #000; }
+.recap summary {
+  cursor: pointer; padding: 12px 14px; font-weight: 800; line-height: 1.35;
+  display: flex; gap: 10px; align-items: flex-start; list-style: none;
+}
+.recap summary::-webkit-details-marker { display: none; }
+.recap summary::after { content: "+"; margin-left: auto; font-family: var(--font-pixel); font-size: 1.3rem; line-height: 1; padding-left: 8px; }
+.recap details[open] summary::after { content: "−"; }
+.recap summary .badge { width: 28px; height: 28px; font-size: .95rem; }
+.recap .body { padding: 0 14px 14px 52px; line-height: 1.55; }
+.recap .body p { margin: 6px 0; }
+.recap .lbl { font-weight: 800; color: #bdbdbd; }
+.recap .pts { color: var(--gold); font-weight: 800; }
+
+/* ---------- Pseudo, code classe et classement ---------- */
+.player-setup {
+  text-align: left; margin: 0 auto 20px; max-width: 32em;
+  background: rgba(255,255,255,.07); border: 2px solid rgba(0,0,0,.6); padding: 12px 14px;
+}
+.player-setup fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.player-setup legend { font-weight: 900; font-size: 1.05rem; margin-bottom: 8px; padding: 0; }
+.pseudo-options { display: grid; gap: 8px; }
+.pseudo-opt { position: relative; }
+.pseudo-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pseudo-opt label {
+  display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 8px 12px;
+  background: #4a4a52; border: 3px solid #000; box-shadow: var(--bevel); cursor: pointer; font-weight: 800; font-size: 1.05rem;
+}
+.pseudo-opt label img { width: 30px; }
+.pseudo-opt input:checked + label { background: #3f8a24; }
+.pseudo-opt input:checked + label::after {
+  content: "✔ Choisi"; margin-left: auto; font-size: .8rem; background: #fff; color: #000; padding: 2px 7px; border: 2px solid #000;
+}
+.pseudo-opt input:focus-visible + label { outline: 4px solid var(--focus); outline-offset: 2px; }
+.setup-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.btn.small { min-height: 44px; font-size: .95rem; padding: 8px 14px; }
+.class-field { display: flex; flex-direction: column; gap: 6px; font-weight: 900; margin-top: 14px; }
+.class-field input {
+  font: inherit; font-size: 1.15rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em;
+  padding: 10px 12px; border: 3px solid #000; background: #f4f4f4; color: #1d1d1f; min-height: 50px; width: 100%; max-width: 13em;
+}
+.class-badge { margin: 12px 0 0; font-weight: 800; }
+.class-badge strong { background: var(--gold); color: #2a1d00; padding: 2px 8px; border: 2px solid #000; }
+.setup-hint { font-size: .85rem; color: #c9c9c9; margin: 10px 0 0; font-weight: 400; }
+.setup-dialog {
+  padding: 0; border: 3px solid #000; background: #1f1f24; color: #fff; font: inherit;
+  width: min(32em, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+}
+.setup-dialog::backdrop { background: rgba(0,0,0,.72); }
+.setup-dialog .player-setup { margin: 0; max-width: none; border: 0; background: none; padding: 18px 16px; }
+.setup-step { margin: 0 0 8px; font-size: .8rem; font-weight: 800; color: #a5f25a; text-transform: uppercase; letter-spacing: .12em; }
+.setup-title2 { margin: 0 0 12px; font-size: 1.3rem; }
+.setup-recap { margin: 0; font-size: 1.1rem; font-weight: 800; }
+.setup-recap strong { background: var(--gold); color: #2a1d00; padding: 2px 8px; border: 2px solid #000; }
+.setup-nav { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+
+.board { margin-top: 26px; background: #000; border: 3px solid #4a4a52; padding: 14px; }
+.board h3 { margin: 0 0 6px; font-size: 1.25rem; }
+.board-status { margin: 0 0 12px; color: #cfefff; font-weight: 700; line-height: 1.45; }
+.board-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.board-list .row {
+  display: grid; grid-template-columns: 2.2em 32px minmax(0, 1fr) auto auto; gap: 10px; align-items: center;
+  padding: 8px 10px; background: #26262c; border: 2px solid #3a3a42;
+}
+.board-list .row.me { background: #2f5f1e; border-color: #a5f25a; }
+.board-list .rk { font-family: var(--font-pixel); font-weight: 900; font-size: 1.2rem; text-align: center; }
+.board-list .md img { width: 30px; display: block; }
+.board-list .ps { font-weight: 800; overflow-wrap: anywhere; }
+.board-list .bn { color: #c9c9c9; font-size: .9rem; font-weight: 700; white-space: nowrap; }
+.board-list .sc { font-family: var(--font-pixel); font-weight: 900; color: var(--gold); font-size: 1.15rem; white-space: nowrap; }
+.board-list .sep, .board-list .empty { text-align: center; color: #9a9a9a; padding: 4px; }
+.board-actions { margin-top: 12px; display: flex; justify-content: center; }
+@media (max-width: 420px) {
+  .pseudo-opt input:checked + label::after { content: "✔"; }
+  .board-list .row { grid-template-columns: 1.8em 26px minmax(0, 1fr) auto; gap: 8px; }
+  .board-list .bn { display: none; }
+}
+
+/* ---------- Mode tableau (TBI) ---------- */
+#screen-board { position: relative; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 28px 16px; }
+#screen-board .world { position: absolute; inset: 0; border: 0; --t: 44px; }
+#screen-board .w-pyr { left: 88%; }
+#screen-board .w-hero { left: calc(88% - var(--t) * 3.4); }
+.live-panel {
+  position: relative; z-index: 2; width: 100%; max-width: 920px;
+  background: rgba(28,28,34,.94); border: 4px solid #000; box-shadow: var(--bevel); padding: 24px 20px;
+}
+.live-class { text-align: center; font-size: 1.2rem; margin: 6px 0 18px; }
+.live-class strong { background: var(--gold); color: #2a1d00; padding: 2px 10px; border: 2px solid #000; }
+.board-list.big .row { font-size: 1.35rem; padding: 12px 16px; grid-template-columns: 2.4em 42px minmax(0, 1fr) auto auto; }
+.board-list.big .md img { width: 40px; }
+.board-list.big .sc { font-size: 1.6rem; }
+.board-list.big .row.fresh { animation: fresh 1.6s ease-out; }
+@keyframes fresh { from { background: #6b5a12; } }
+.live-join { text-align: center; margin: 18px 0 4px; color: #cfefff; overflow-wrap: anywhere; font-weight: 700; }
+.live-updated { text-align: center; font-size: .85rem; color: #bdbdbd; margin: 6px 0 0; }
+
+/* ---------- Version sobre (allège l'interface sans quitter le thème) ---------- */
+:root { --bevel: inset 2px 2px 0 rgba(255,255,255,.16), inset -2px -3px 0 rgba(0,0,0,.25); }
+body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(--tex-dirt, none); }
+.btn { border-width: 3px; text-shadow: none; font-weight: 800; letter-spacing: 0; }
+.btn.big { min-height: 58px; font-size: 1.15rem; padding: 12px 28px; }
+.icon-btn { border-width: 2px; background: #45454b; }
+.world { border-width: 3px; box-shadow: none; }
+.start-panel { background: rgba(26,26,30,.92); border-width: 3px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 22px 20px 18px; }
+.cube-row { gap: 10px; }
+.cube-row img, .cube-row img:nth-child(2) { width: 40px; animation: none; }
+.title .l1 { font-size: clamp(1.9rem, 7vw, 2.8rem); filter: drop-shadow(3px 3px 0 #111); }
+.title .l2 { font-size: clamp(1.2rem, 4.5vw, 1.75rem); filter: drop-shadow(2px 2px 0 #3a2600); }
+.subtitle { background: none; border: 0; box-shadow: none; padding: 0; margin-top: 10px; color: #a5f25a; font-size: .9rem; text-transform: uppercase; letter-spacing: .14em; }
+.story { font-size: 1rem; color: #dcdcdc; margin: 14px auto 12px; }
+.rules { gap: 2px; margin-bottom: 16px; }
+.rules li { background: none; border: 0; padding: 4px 0; font-size: .94rem; color: #d2d2d2; }
+.rules img { width: 24px; }
+.player-setup { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); }
+.pseudo-opt label { border-width: 2px; box-shadow: none; background: #36363c; min-height: 46px; font-size: 1rem; }
+.pseudo-opt input:checked + label { background: #2f6b1e; }
+.pseudo-opt input:checked + label::after { border-width: 1px; }
+.class-field input { border-width: 2px; }
+.disclaimer { font-size: .76rem; color: #9a9a9a; }
+
+.hud { border-bottom-width: 2px; box-shadow: none; }
+.xpbar { height: 10px; border-width: 2px; }
+.scorebox { border-width: 2px; }
+.card { border-width: 3px; background: #d2d2d2; box-shadow: inset 2px 2px 0 #f2f2f2, inset -2px -2px 0 #8e8e8e; }
+.chip { box-shadow: none; border-width: 1px; font-weight: 700; font-size: .78rem; padding: 2px 8px; }
+.chip.reward { display: none; }
+.question { margin: 10px 0; }
+.torch { font-size: .8rem; margin-bottom: 12px; color: #3a3a3a; }
+.torch-bar { height: 10px; border-width: 2px; }
+.ans { border-width: 3px; font-weight: 700; min-height: 60px; }
+.ans .shape { width: 30px; height: 30px; border: 0; background: rgba(0,0,0,.2); font-size: .95rem; }
+.a-wood { background: #6f4d2d; }
+.a-lapis { background: #34538c; }
+.a-gold { background: #c7a23c; color: #231900; }
+.a-ame { background: #634a86; }
+.kbd-hint, .ans .key { display: none !important; }
+.feedback { border-width: 3px; }
+.fb-verdict { font-size: 1.15rem; }
+.fb-points { font-size: 1.35rem; text-shadow: none; }
+.fb-cube { width: 50px; }
+.badge { width: 26px; height: 26px; border-width: 2px; font-size: .9rem; }
+.breakdown li { border-width: 1px; font-weight: 700; }
+.hotbar-wrap { background: rgba(0,0,0,.5); border-top: 0; }
+.hotbar { border-width: 2px; }
+@media (min-width: 920px) { .ans { min-height: 72px; } }
+
+.result, .live-panel { border-width: 3px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.end-title { font-size: clamp(1.6rem, 5vw, 2.3rem); text-shadow: 2px 2px 0 #000; }
+.stat { border-width: 2px; }
+.stat strong { font-size: clamp(1.2rem, 4.5vw, 1.7rem); }
+.recap details { border-width: 1px; border-color: rgba(255,255,255,.1); }
+
+/* Classement : statistiques, nombre de parties, podium du TBI */
+.board { border-width: 2px; }
+.board-stats, .live-stats { margin: 0 0 12px; color: #bdbdbd; font-size: .92rem; }
+.live-stats { text-align: center; margin-top: -8px; font-size: 1.05rem; }
+.live-join { font-size: .85rem; font-weight: 600; }
+.board-list .row { border-width: 1px; }
+.board-list .ps small { display: block; font-size: .75rem; font-weight: 600; color: #a9a9a9; }
+.board-list.big .ps small { font-size: .9rem; }
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 14px; margin: 6px 0 18px; }
+.pod { display: flex; flex-direction: column; align-items: center; gap: 4px; width: min(30%, 200px); text-align: center; }
+.pod img { width: 54px; }
+.pod-1 img { width: 66px; }
+.pod-name { font-weight: 800; font-size: 1.15rem; line-height: 1.2; overflow-wrap: anywhere; }
+.pod-score { font-family: var(--font-pixel); font-weight: 900; color: var(--gold); font-size: 1.4rem; }
+.pod-step {
+  width: 100%; display: grid; place-items: center; font-family: var(--font-pixel); font-weight: 900; font-size: 1.8rem; color: #fff;
+  background: #4a4a52; border: 2px solid #000; box-shadow: var(--bevel);
+}
+.pod-1 .pod-step { height: 110px; background: #2b8a83; }
+.pod-2 .pod-step { height: 80px; background: #a8862a; }
+.pod-3 .pod-step { height: 56px; background: #7d7d84; }
+.pod.fresh .pod-step { animation: fresh 1.6s ease-out; }
+@media (max-width: 600px) { .pod img, .pod-1 img { width: 40px; } .pod-name { font-size: .95rem; } .pod-score { font-size: 1.1rem; } }
+
+/* ---------- Crédits eSCIENCES ---------- */
+:root { --logo-esciences: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iNTYwIiB6b29tQW5kUGFuPSJtYWduaWZ5IiB2aWV3Qm94PSIwIDAgNDIwIDEzNS4wMDAwMDMiIGhlaWdodD0iMTgwIiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJ4TWlkWU1pZCBtZWV0IiB2ZXJzaW9uPSIxLjAiPjxkZWZzPjxnLz48Y2xpcFBhdGggaWQ9IjMxODc2MzUxNGQiPjxwYXRoIGQ9Ik0gNTcgNjkgTCAxMTYuMDMxMjUgNjkgTCAxMTYuMDMxMjUgMTA2LjExMzI4MSBMIDU3IDEwNi4xMTMyODEgWiBNIDU3IDY5ICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9IjQyNmQ5YzdiOGEiPjxwYXRoIGQ9Ik0gNTcuMDE1NjI1IDY5LjY5OTIxOSBMIDExNi4wMzEyNSA2OS42OTkyMTkgTCAxMTYuMDMxMjUgMTA2LjEwOTM3NSBMIDU3LjAxNTYyNSAxMDYuMTA5Mzc1IFogTSA1Ny4wMTU2MjUgNjkuNjk5MjE5ICIgY2xpcC1ydWxlPSJub256ZXJvIi8+PC9jbGlwUGF0aD48Y2xpcFBhdGggaWQ9IjgwNDBlZTk1OWQiPjxwYXRoIGQ9Ik0gODUuNzM0Mzc1IDcyLjkzNzUgQyA3OC4xNjQwNjIgNjcuNzg1MTU2IDY3Ljk1MzEyNSA2OS4wMjM0MzggNjEuODI4MTI1IDc1LjgzMjAzMSBDIDU1LjcwNzAzMSA4Mi42NDA2MjUgNTUuNTU4NTk0IDkyLjkyOTY4OCA2MS40ODQzNzUgOTkuOTEwMTU2IEMgNjcuMzI0MjE5IDEwMy43NzM0MzggNzQuMzI4MTI1IDEwNi4wMjM0MzggODEuODU1NDY5IDEwNi4wMjM0MzggQyA5Ni45MTQwNjIgMTA2LjAyMzQzOCAxMDkuODcxMDk0IDk3LjAxNTYyNSAxMTUuNjI4OTA2IDg0LjA5NzY1NiBMIDExNS44NTE1NjIgODMuNTg5ODQ0IEMgMTE2LjI3MzQzOCA4Mi40MDIzNDQgMTE2LjEwNTQ2OSA4MS4wNjY0MDYgMTE1LjM3MTA5NCA4MC4wMTE3MTkgQyAxMTQuNTM1MTU2IDc4LjgwNDY4OCAxMTMuMDkzNzUgNzguMTY0MDYyIDExMS42MzY3MTkgNzguMzQ3NjU2IEMgMTEwLjE3OTY4OCA3OC41MzEyNSAxMDguOTQxNDA2IDc5LjUxMTcxOSAxMDguNDI5Njg4IDgwLjg4NjcxOSBDIDEwMi41MzUxNTYgODkuNzY1NjI1IDkwLjE5MTQwNiA4OS45MTAxNTYgODAuOTkyMTg4IDg3LjE5OTIxOSBDIDY5LjA0Njg3NSA4My42Nzk2ODggNzIuMzgyODEyIDY5LjM5NDUzMSA4NS43MzQzNzUgNzIuOTM3NSAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSIxNzcxYmVlYTBlIj48cGF0aCBkPSJNIDE2LjI2OTUzMSAyMS45ODQzNzUgTCAxMTQgMjEuOTg0Mzc1IEwgMTE0IDEwMCBMIDE2LjI2OTUzMSAxMDAgWiBNIDE2LjI2OTUzMSAyMS45ODQzNzUgIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iZWZmOGIxMTM5YyI+PHBhdGggZD0iTSAxNi4zMDA3ODEgMjEuOTg0Mzc1IEwgMTEzLjMzNTkzOCAyMS45ODQzNzUgTCAxMTMuMzM1OTM4IDEwMCBMIDE2LjMwMDc4MSAxMDAgWiBNIDE2LjMwMDc4MSAyMS45ODQzNzUgIiBjbGlwLXJ1bGU9Im5vbnplcm8iLz48L2NsaXBQYXRoPjxjbGlwUGF0aCBpZD0iN2UxZDg4ZDczNCI+PHBhdGggZD0iTSAzNC4yNDYwOTQgMzcuMzY3MTg4IEMgMzcuNzA3MDMxIDM3LjM2NzE4OCA0MC41MTE3MTkgNDAuMTc1NzgxIDQwLjUxMTcxOSA0My42MzY3MTkgQyA0MC41MTE3MTkgNDcuMDk3NjU2IDM3LjcwNzAzMSA0OS45MDIzNDQgMzQuMjQ2MDk0IDQ5LjkwMjM0NCBDIDMwLjc4NTE1NiA0OS45MDIzNDQgMjcuOTc2NTYyIDQ3LjA5NzY1NiAyNy45NzY1NjIgNDMuNjM2NzE5IEMgMjcuOTc2NTYyIDQwLjE3NTc4MSAzMC43ODUxNTYgMzcuMzY3MTg4IDM0LjI0NjA5NCAzNy4zNjcxODggTSAyNy4xMjEwOTQgNjguNDE0MDYyIEMgMzAuNTgyMDMxIDY4LjQxNDA2MiAzMy4zOTA2MjUgNzEuMjIyNjU2IDMzLjM5MDYyNSA3NC42ODM1OTQgQyAzMy4zOTA2MjUgNzguMTQ0NTMxIDMwLjU4MjAzMSA4MC45NDkyMTkgMjcuMTIxMDk0IDgwLjk0OTIxOSBDIDIzLjY2MDE1NiA4MC45NDkyMTkgMjAuODU1NDY5IDc4LjE0MDYyNSAyMC44NTU0NjkgNzQuNjgzNTk0IEMgMjAuODU1NDY5IDcxLjIyMjY1NiAyMy42NjQwNjIgNjguNDE0MDYyIDI3LjEyMTA5NCA2OC40MTQwNjIgWiBNIDIwLjI4NTE1NiA1MC43NTM5MDYgQyAyMi40ODgyODEgNTAuNzUzOTA2IDI0LjI3MzQzOCA1Mi41NDI5NjkgMjQuMjczNDM4IDU0Ljc0MjE4OCBDIDI0LjI3MzQzOCA1Ni45NDUzMTIgMjIuNDg4MjgxIDU4LjczMDQ2OSAyMC4yODUxNTYgNTguNzMwNDY5IEMgMTguMDgyMDMxIDU4LjczMDQ2OSAxNi4zMDA3ODEgNTYuOTQ1MzEyIDE2LjMwMDc4MSA1NC43NDIxODggQyAxNi4zMDA3ODEgNTIuNTQyOTY5IDE4LjA4NTkzOCA1MC43NTM5MDYgMjAuMjg1MTU2IDUwLjc1MzkwNiBaIE0gNDUuNDk2MDk0IDIxLjk4NDM3NSBDIDQ3LjY5OTIxOSAyMS45ODQzNzUgNDkuNDg0Mzc1IDIzLjc3MzQzOCA0OS40ODQzNzUgMjUuOTc2NTYyIEMgNDkuNDg0Mzc1IDI4LjE3OTY4OCA0Ny42OTkyMTkgMjkuOTYwOTM4IDQ1LjQ5NjA5NCAyOS45NjA5MzggQyA0My4yOTI5NjkgMjkuOTYwOTM4IDQxLjUwNzgxMiAyOC4xNzU3ODEgNDEuNTA3ODEyIDI1Ljk3NjU2MiBDIDQxLjUwNzgxMiAyMy43NzM0MzggNDMuMjkyOTY5IDIxLjk4NDM3NSA0NS40OTYwOTQgMjEuOTg0Mzc1IFogTSA2NC43ODUxNTYgNzMuMTgzNTk0IEMgNzAuOTEwMTU2IDY4Ljc5Njg3NSA3OS4yODEyNSA2OC41NDY4NzUgODUuNzMwNDY5IDcyLjkzNzUgQyA5OC42MDU0NjkgNzYuMzUxNTYyIDExMy40ODQzNzUgNjguNDI5Njg4IDExMy4xNzU3ODEgNTQuMzM1OTM4IEMgMTEzLjAxOTUzMSA0Ny4wMjM0MzggMTA4LjY0ODQzOCA0Mi42Njc5NjkgMTAyLjkwNjI1IDM4LjY4MzU5NCBDIDkwLjM0Mzc1IDI5Ljk2MDkzOCA3My42Mjg5MDYgMjkuOTAyMzQ0IDYxLjAwNzgxMiAzOC41NDI5NjkgQyA2MS4zMzU5MzggMzQuNTUwNzgxIDU4LjE5MTQwNiAzMS4xNDA2MjUgNTQuMTk1MzEyIDMxLjE0MDYyNSBDIDUwLjQyMTg3NSAzMS4xNDA2MjUgNDcuMzU5Mzc1IDM0LjE5OTIxOSA0Ny4zNTkzNzUgMzcuOTc2NTYyIEMgNDcuMzU5Mzc1IDQxLjI5Njg3NSA0OS43MjI2NTYgNDQuMDYyNSA1Mi44NTkzNzUgNDQuNjc5Njg4IEwgNTIuODYzMjgxIDQ0LjY3OTY4OCBDIDUzLjI0MjE4OCA0NC42Nzk2ODggNTMuNjEzMjgxIDQ0LjcyNjU2MiA1My45NjQ4NDQgNDQuODA4NTk0IEMgNTYuMTA1NDY5IDQ1LjMwODU5NCA1Ny42OTkyMTkgNDcuMjMwNDY5IDU3LjY5OTIxOSA0OS41MTk1MzEgQyA1Ny42OTkyMTkgNTMuMzc4OTA2IDUzLjM1MTU2MiA1NS43NSA1MC4wNTg1OTQgNTMuNDY0ODQ0IEMgNDguNTc4MTI1IDUyLjQzMzU5NCA0Ni42NzE4NzUgNTEuODU1NDY5IDQ0LjgxNjQwNiA1MS44NTU0NjkgQyAzOS42NTIzNDQgNTEuODU1NDY5IDM1LjQ2NDg0NCA1Ni4wNDI5NjkgMzUuNDY0ODQ0IDYxLjIxMDkzOCBDIDM1LjQ2NDg0NCA2Ni4zNzUgMzkuNjUyMzQ0IDcwLjU2MjUgNDQuODE2NDA2IDcwLjU2MjUgTCA0NC45MjE4NzUgNzAuNTM1MTU2IEMgNDUuNTQ2ODc1IDcwLjM2MzI4MSA0Ni4xOTkyMTkgNzAuMjk2ODc1IDQ2Ljg1NTQ2OSA3MC4zNDM3NSBDIDQ5LjgyNDIxOSA3MC41NTA3ODEgNTIuMTY0MDYyIDczLjAyMzQzOCA1Mi4xNjQwNjIgNzYuMDQyOTY5IEMgNTIuMTY0MDYyIDc5LjcxMDkzOCA0OC43OTY4NzUgODIuMzUxNTYyIDQ1LjMwODU5NCA4MS42NDA2MjUgQyA0NS4wODU5MzggODEuNTk3NjU2IDQ0Ljg3MTA5NCA4MS41MzkwNjIgNDQuNjYwMTU2IDgxLjQ3MjY1NiBDIDQ0LjI4OTA2MiA4MS4zOTQ1MzEgNDMuOTA2MjUgODEuMzU1NDY5IDQzLjUxNTYyNSA4MS4zNTU0NjkgQyA0MC4zNTkzNzUgODEuMzU1NDY5IDM3LjgwMDc4MSA4My45MTc5NjkgMzcuODAwNzgxIDg3LjA3MDMxMiBDIDM3LjgwMDc4MSA5MC4yMjY1NjIgNDAuMzU5Mzc1IDkyLjc4NTE1NiA0My41MTU2MjUgOTIuNzg1MTU2IEMgNDkuNTc4MTI1IDkyLjc4NTE1NiA0OC4wMDM5MDYgODUuMzEyNSA1MS44NDM3NSA5MC42NDA2MjUgQyA1NC40Njg3NSA5NC4yODUxNTYgNTcuNzM4MjgxIDk3LjQyOTY4OCA2MS40ODQzNzUgOTkuOTEwMTU2IEMgNTguODEyNSA5Ni43NTc4MTIgNTcuMzc1IDkyLjkzNzUgNTcuMTY0MDYyIDg5LjA2NjQwNiBDIDU2Ljg1OTM3NSA4Ni43ODkwNjIgNTcuMjQ2MDk0IDg0LjAyNzM0NCA1OC4zMDA3ODEgODEuNjQwNjI1IEMgNTcuNDE0MDYyIDg0LjAwNzgxMiA1Ny4wMzUxNTYgODYuNTE5NTMxIDU3LjE2MDE1NiA4OS4wMTU2MjUgQyA1Mi4wNzAzMTIgMzEuNzk2ODc1IDExNS45NDUzMTIgNDUuNzEwOTM4IDk0LjczNDM3NSA2My4xOTUzMTIgQyA5My4wNzgxMjUgNjQuNTYyNSA5MC40MTAxNTYgNjQuODc1IDg3LjMzOTg0NCA2NC44MjAzMTIgQyA3Ny42MDkzNzUgNjMuMTUyMzQ0IDcwLjg1MTU2MiA2Ni44MDA3ODEgNjQuNzg1MTU2IDczLjE4MzU5NCBaIE0gNjQuNzg1MTU2IDczLjE4MzU5NCAiIGNsaXAtcnVsZT0ibm9uemVybyIvPjwvY2xpcFBhdGg+PGNsaXBQYXRoIGlkPSIzYmIwODJlNzFmIj48cmVjdCB4PSIwIiB3aWR0aD0iMjg5IiB5PSIwIiBoZWlnaHQ9IjgzIi8+PC9jbGlwUGF0aD48L2RlZnM+PGcgY2xpcC1wYXRoPSJ1cmwoIzMxODc2MzUxNGQpIj48cGF0aCBmaWxsPSIjZmZmZmZmIiBkPSJNIDg1LjczNDM3NSA3Mi45Mzc1IEMgNzguMTY0MDYyIDY3Ljc4NTE1NiA2Ny45NTMxMjUgNjkuMDIzNDM4IDYxLjgyODEyNSA3NS44MzIwMzEgQyA1NS43MDcwMzEgODIuNjQwNjI1IDU1LjU1ODU5NCA5Mi45Mjk2ODggNjEuNDg0Mzc1IDk5LjkxMDE1NiBDIDY3LjMyNDIxOSAxMDMuNzczNDM4IDc0LjMyODEyNSAxMDYuMDIzNDM4IDgxLjg1NTQ2OSAxMDYuMDIzNDM4IEMgOTYuOTE0MDYyIDEwNi4wMjM0MzggMTA5Ljg3MTA5NCA5Ny4wMTU2MjUgMTE1LjYyODkwNiA4NC4wOTc2NTYgTCAxMTUuODUxNTYyIDgzLjU4OTg0NCBDIDExNi4yNzM0MzggODIuNDAyMzQ0IDExNi4xMDU0NjkgODEuMDY2NDA2IDExNS4zNzEwOTQgODAuMDExNzE5IEMgMTE0LjUzNTE1NiA3OC44MDQ2ODggMTEzLjA5Mzc1IDc4LjE2NDA2MiAxMTEuNjM2NzE5IDc4LjM0NzY1NiBDIDExMC4xNzk2ODggNzguNTMxMjUgMTA4Ljk0MTQwNiA3OS41MTE3MTkgMTA4LjQyOTY4OCA4MC44ODY3MTkgQyAxMDIuNTM1MTU2IDg5Ljc2NTYyNSA5MC4xOTE0MDYgODkuOTEwMTU2IDgwLjk5MjE4OCA4Ny4xOTkyMTkgQyA2OS4wNDY4NzUgODMuNjc5Njg4IDcyLjM4MjgxMiA2OS4zOTQ1MzEgODUuNzM0Mzc1IDcyLjkzNzUgIiBmaWxsLW9wYWNpdHk9IjEiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjNDI2ZDljN2I4YSkiPjxnIGNsaXAtcGF0aD0idXJsKCM4MDQwZWU5NTlkKSI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTSA1NS41NjI1IDY3Ljc4NTE1NiBMIDExNi4yNzczNDQgNjcuNzg1MTU2IEwgMTE2LjI3NzM0NCAxMDYuMDIzNDM4IEwgNTUuNTYyNSAxMDYuMDIzNDM4IFogTSA1NS41NjI1IDY3Ljc4NTE1NiAiIGZpbGwtb3BhY2l0eT0iMSIgZmlsbC1ydWxlPSJub256ZXJvIi8+PC9nPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjMTc3MWJlZWEwZSkiPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0gMzQuMjQ2MDk0IDM3LjM2NzE4OCBDIDM3LjcwNzAzMSAzNy4zNjcxODggNDAuNTExNzE5IDQwLjE3NTc4MSA0MC41MTE3MTkgNDMuNjM2NzE5IEMgNDAuNTExNzE5IDQ3LjA5NzY1NiAzNy43MDcwMzEgNDkuOTAyMzQ0IDM0LjI0NjA5NCA0OS45MDIzNDQgQyAzMC43ODUxNTYgNDkuOTAyMzQ0IDI3Ljk3NjU2MiA0Ny4wOTc2NTYgMjcuOTc2NTYyIDQzLjYzNjcxOSBDIDI3Ljk3NjU2MiA0MC4xNzU3ODEgMzAuNzg1MTU2IDM3LjM2NzE4OCAzNC4yNDYwOTQgMzcuMzY3MTg4IE0gMjcuMTIxMDk0IDY4LjQxNDA2MiBDIDMwLjU4MjAzMSA2OC40MTQwNjIgMzMuMzkwNjI1IDcxLjIyMjY1NiAzMy4zOTA2MjUgNzQuNjgzNTk0IEMgMzMuMzkwNjI1IDc4LjE0NDUzMSAzMC41ODIwMzEgODAuOTQ5MjE5IDI3LjEyMTA5NCA4MC45NDkyMTkgQyAyMy42NjAxNTYgODAuOTQ5MjE5IDIwLjg1NTQ2OSA3OC4xNDA2MjUgMjAuODU1NDY5IDc0LjY4MzU5NCBDIDIwLjg1NTQ2OSA3MS4yMjI2NTYgMjMuNjY0MDYyIDY4LjQxNDA2MiAyNy4xMjEwOTQgNjguNDE0MDYyIFogTSAyMC4yODUxNTYgNTAuNzUzOTA2IEMgMjIuNDg4MjgxIDUwLjc1MzkwNiAyNC4yNzM0MzggNTIuNTQyOTY5IDI0LjI3MzQzOCA1NC43NDIxODggQyAyNC4yNzM0MzggNTYuOTQ1MzEyIDIyLjQ4ODI4MSA1OC43MzA0NjkgMjAuMjg1MTU2IDU4LjczMDQ2OSBDIDE4LjA4MjAzMSA1OC43MzA0NjkgMTYuMzAwNzgxIDU2Ljk0NTMxMiAxNi4zMDA3ODEgNTQuNzQyMTg4IEMgMTYuMzAwNzgxIDUyLjU0Mjk2OSAxOC4wODU5MzggNTAuNzUzOTA2IDIwLjI4NTE1NiA1MC43NTM5MDYgWiBNIDQ1LjQ5NjA5NCAyMS45ODQzNzUgQyA0Ny42OTkyMTkgMjEuOTg0Mzc1IDQ5LjQ4NDM3NSAyMy43NzM0MzggNDkuNDg0Mzc1IDI1Ljk3NjU2MiBDIDQ5LjQ4NDM3NSAyOC4xNzk2ODggNDcuNjk5MjE5IDI5Ljk2MDkzOCA0NS40OTYwOTQgMjkuOTYwOTM4IEMgNDMuMjkyOTY5IDI5Ljk2MDkzOCA0MS41MDc4MTIgMjguMTc1NzgxIDQxLjUwNzgxMiAyNS45NzY1NjIgQyA0MS41MDc4MTIgMjMuNzczNDM4IDQzLjI5Mjk2OSAyMS45ODQzNzUgNDUuNDk2MDk0IDIxLjk4NDM3NSBaIE0gNjQuNzg1MTU2IDczLjE4MzU5NCBDIDcwLjkxMDE1NiA2OC43OTY4NzUgNzkuMjgxMjUgNjguNTQ2ODc1IDg1LjczMDQ2OSA3Mi45Mzc1IEMgOTguNjA1NDY5IDc2LjM1MTU2MiAxMTMuNDg0Mzc1IDY4LjQyOTY4OCAxMTMuMTc1NzgxIDU0LjMzNTkzOCBDIDExMy4wMTk1MzEgNDcuMDIzNDM4IDEwOC42NDg0MzggNDIuNjY3OTY5IDEwMi45MDYyNSAzOC42ODM1OTQgQyA5MC4zNDM3NSAyOS45NjA5MzggNzMuNjI4OTA2IDI5LjkwMjM0NCA2MS4wMDc4MTIgMzguNTQyOTY5IEMgNjEuMzM1OTM4IDM0LjU1MDc4MSA1OC4xOTE0MDYgMzEuMTQwNjI1IDU0LjE5NTMxMiAzMS4xNDA2MjUgQyA1MC40MjE4NzUgMzEuMTQwNjI1IDQ3LjM1OTM3NSAzNC4xOTkyMTkgNDcuMzU5Mzc1IDM3Ljk3NjU2MiBDIDQ3LjM1OTM3NSA0MS4yOTY4NzUgNDkuNzIyNjU2IDQ0LjA2MjUgNTIuODU5Mzc1IDQ0LjY3OTY4OCBMIDUyLjg2MzI4MSA0NC42Nzk2ODggQyA1My4yNDIxODggNDQuNjc5Njg4IDUzLjYxMzI4MSA0NC43MjY1NjIgNTMuOTY0ODQ0IDQ0LjgwODU5NCBDIDU2LjEwNTQ2OSA0NS4zMDg1OTQgNTcuNjk5MjE5IDQ3LjIzMDQ2OSA1Ny42OTkyMTkgNDkuNTE5NTMxIEMgNTcuNjk5MjE5IDUzLjM3ODkwNiA1My4zNTE1NjIgNTUuNzUgNTAuMDU4NTk0IDUzLjQ2NDg0NCBDIDQ4LjU3ODEyNSA1Mi40MzM1OTQgNDYuNjcxODc1IDUxLjg1NTQ2OSA0NC44MTY0MDYgNTEuODU1NDY5IEMgMzkuNjUyMzQ0IDUxLjg1NTQ2OSAzNS40NjQ4NDQgNTYuMDQyOTY5IDM1LjQ2NDg0NCA2MS4yMTA5MzggQyAzNS40NjQ4NDQgNjYuMzc1IDM5LjY1MjM0NCA3MC41NjI1IDQ0LjgxNjQwNiA3MC41NjI1IEwgNDQuOTIxODc1IDcwLjUzNTE1NiBDIDQ1LjU0Njg3NSA3MC4zNjMyODEgNDYuMTk5MjE5IDcwLjI5Njg3NSA0Ni44NTU0NjkgNzAuMzQzNzUgQyA0OS44MjQyMTkgNzAuNTUwNzgxIDUyLjE2NDA2MiA3My4wMjM0MzggNTIuMTY0MDYyIDc2LjA0Mjk2OSBDIDUyLjE2NDA2MiA3OS43MTA5MzggNDguNzk2ODc1IDgyLjM1MTU2MiA0NS4zMDg1OTQgODEuNjQwNjI1IEMgNDUuMDg1OTM4IDgxLjU5NzY1NiA0NC44NzEwOTQgODEuNTM5MDYyIDQ0LjY2MDE1NiA4MS40NzI2NTYgQyA0NC4yODkwNjIgODEuMzk0NTMxIDQzLjkwNjI1IDgxLjM1NTQ2OSA0My41MTU2MjUgODEuMzU1NDY5IEMgNDAuMzU5Mzc1IDgxLjM1NTQ2OSAzNy44MDA3ODEgODMuOTE3OTY5IDM3LjgwMDc4MSA4Ny4wNzAzMTIgQyAzNy44MDA3ODEgOTAuMjI2NTYyIDQwLjM1OTM3NSA5Mi43ODUxNTYgNDMuNTE1NjI1IDkyLjc4NTE1NiBDIDQ5LjU3ODEyNSA5Mi43ODUxNTYgNDguMDAzOTA2IDg1LjMxMjUgNTEuODQzNzUgOTAuNjQwNjI1IEMgNTQuNDY4NzUgOTQuMjg1MTU2IDU3LjczODI4MSA5Ny40Mjk2ODggNjEuNDg0Mzc1IDk5LjkxMDE1NiBDIDU4LjgxMjUgOTYuNzU3ODEyIDU3LjM3NSA5Mi45Mzc1IDU3LjE2NDA2MiA4OS4wNjY0MDYgQyA1Ni44NTkzNzUgODYuNzg5MDYyIDU3LjI0NjA5NCA4NC4wMjczNDQgNTguMzAwNzgxIDgxLjY0MDYyNSBDIDU3LjQxNDA2MiA4NC4wMDc4MTIgNTcuMDM1MTU2IDg2LjUxOTUzMSA1Ny4xNjAxNTYgODkuMDE1NjI1IEMgNTIuMDcwMzEyIDMxLjc5Njg3NSAxMTUuOTQ1MzEyIDQ1LjcxMDkzOCA5NC43MzQzNzUgNjMuMTk1MzEyIEMgOTMuMDc4MTI1IDY0LjU2MjUgOTAuNDEwMTU2IDY0Ljg3NSA4Ny4zMzk4NDQgNjQuODIwMzEyIEMgNzcuNjA5Mzc1IDYzLjE1MjM0NCA3MC44NTE1NjIgNjYuODAwNzgxIDY0Ljc4NTE1NiA3My4xODM1OTQgWiBNIDY0Ljc4NTE1NiA3My4xODM1OTQgIiBmaWxsLW9wYWNpdHk9IjEiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48ZyBjbGlwLXBhdGg9InVybCgjZWZmOGIxMTM5YykiPjxnIGNsaXAtcGF0aD0idXJsKCM3ZTFkODhkNzM0KSI+PHBhdGggZmlsbD0iI2ZmZmZmZiIgZD0iTSAxNi4zMDA3ODEgMjEuOTg0Mzc1IEwgMTE1Ljk0NTMxMiAyMS45ODQzNzUgTCAxMTUuOTQ1MzEyIDk5LjkxMDE1NiBMIDE2LjMwMDc4MSA5OS45MTAxNTYgWiBNIDE2LjMwMDc4MSAyMS45ODQzNzUgIiBmaWxsLW9wYWNpdHk9IjEiIGZpbGwtcnVsZT0ibm9uemVybyIvPjwvZz48L2c+PGcgdHJhbnNmb3JtPSJtYXRyaXgoMSwgMCwgMCwgMSwgMTIzLCAzMSkiPjxnIGNsaXAtcGF0aD0idXJsKCMzYmIwODJlNzFmKSI+PGcgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIxIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxLjI0MjQzNSwgNjYuNzY5NzgzKSI+PGc+PHBhdGggZD0iTSAzMS42MjUgLTM2Ljg3NSBMIDIxLjM0Mzc1IC0zNi44NzUgTCAyMS4zNDM3NSAtNDAuODI4MTI1IEMgMjEuMzQzNzUgLTQxLjIzNDM3NSAyMS4xOTUzMTIgLTQxLjU5Mzc1IDIwLjkwNjI1IC00MS45MDYyNSBDIDIwLjYyNSAtNDIuMjE4NzUgMjAuMjgxMjUgLTQyLjM3NSAxOS44NzUgLTQyLjM3NSBMIDE1LjYwOTM3NSAtNDIuMzc1IEMgMTUuMjAzMTI1IC00Mi4zNzUgMTQuODUxNTYyIC00Mi4yMTg3NSAxNC41NjI1IC00MS45MDYyNSBDIDE0LjI4MTI1IC00MS41OTM3NSAxNC4xNDA2MjUgLTQxLjIzNDM3NSAxNC4xNDA2MjUgLTQwLjgyODEyNSBMIDE0LjE0MDYyNSAtMzEuOTM3NSBDIDE0LjE0MDYyNSAtMzEuNTE5NTMxIDE0LjI4MTI1IC0zMS4xNTYyNSAxNC41NjI1IC0zMC44NDM3NSBDIDE0Ljg1MTU2MiAtMzAuNTM5MDYyIDE1LjIwMzEyNSAtMzAuMzkwNjI1IDE1LjYwOTM3NSAtMzAuMzkwNjI1IEwgMjIuNTc4MTI1IC0zMC4zOTA2MjUgQyAyOC45NjA5MzggLTMwLjI4NTE1NiAzMi4xNTYyNSAtMjYuODc4OTA2IDMyLjE1NjI1IC0yMC4xNzE4NzUgTCAzMi4xNTYyNSAtOS40Mzc1IEMgMzIuMTU2MjUgLTIuNjMyODEyIDI4Ljk2MDkzOCAwLjc2NTYyNSAyMi41NzgxMjUgMC43NjU2MjUgTCAxMy40NTMxMjUgMC43NjU2MjUgQyA3LjA1NDY4OCAwLjc2NTYyNSAzLjg1OTM3NSAtMi42MzI4MTIgMy44NTkzNzUgLTkuNDM3NSBMIDMuODU5Mzc1IC0xNC42MDkzNzUgTCAxNC4xNDA2MjUgLTE0LjYwOTM3NSBMIDE0LjE0MDYyNSAtOS4wNDY4NzUgQyAxNC4xNDA2MjUgLTguNjI4OTA2IDE0LjI4MTI1IC04LjI2NTYyNSAxNC41NjI1IC03Ljk1MzEyNSBDIDE0Ljg1MTU2MiAtNy42NDg0MzggMTUuMjAzMTI1IC03LjUgMTUuNjA5Mzc1IC03LjUgTCAyMC40MDYyNSAtNy41IEMgMjAuODIwMzEyIC03LjUgMjEuMTcxODc1IC03LjY0ODQzOCAyMS40NTMxMjUgLTcuOTUzMTI1IEMgMjEuNzM0Mzc1IC04LjI2NTYyNSAyMS44NzUgLTguNjI4OTA2IDIxLjg3NSAtOS4wNDY4NzUgTCAyMS44NzUgLTE4Ljg1OTM3NSBDIDIxLjg3NSAtMTkuMjczNDM4IDIxLjczNDM3NSAtMTkuNjMyODEyIDIxLjQ1MzEyNSAtMTkuOTM3NSBDIDIxLjE3MTg3NSAtMjAuMjUgMjAuODIwMzEyIC0yMC40MDYyNSAyMC40MDYyNSAtMjAuNDA2MjUgTCAxMy40NTMxMjUgLTIwLjQwNjI1IEMgNy4wNTQ2ODggLTIwLjQwNjI1IDMuODU5Mzc1IC0yMy44MDQ2ODggMy44NTkzNzUgLTMwLjYwOTM3NSBMIDMuODU5Mzc1IC00MC41OTM3NSBDIDMuODU5Mzc1IC00Ny4zOTQ1MzEgNy4wNTQ2ODggLTUwLjc5Njg3NSAxMy40NTMxMjUgLTUwLjc5Njg3NSBMIDIyLjAzMTI1IC01MC43OTY4NzUgQyAyOC40MjU3ODEgLTUwLjc5Njg3NSAzMS42MjUgLTQ3LjM5NDUzMSAzMS42MjUgLTQwLjU5Mzc1IFogTSAzMS42MjUgLTM2Ljg3NSAiLz48L2c+PC9nPjwvZz48ZyBmaWxsPSIjZmZmZmZmIiBmaWxsLW9wYWNpdHk9IjEiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQwLjY2NzcxMywgNjYuNzY5NzgzKSI+PGc+PHBhdGggZD0iTSAyMi41IC04LjE4NzUgTCAyMi41IC0xNS45MjE4NzUgTCAzMi43ODEyNSAtMTUuOTIxODc1IEwgMzIuNzgxMjUgLTkuNDM3NSBDIDMyLjc4MTI1IC0yLjYzMjgxMiAyOS41ODIwMzEgMC43NjU2MjUgMjMuMTg3NSAwLjc2NTYyNSBMIDEzLjQ1MzEyNSAwLjc2NTYyNSBDIDcuMDU0Njg4IDAuNzY1NjI1IDMuODU5Mzc1IC0yLjYzMjgxMiAzLjg1OTM3NSAtOS40Mzc1IEwgMy44NTkzNzUgLTQwLjU5Mzc1IEMgMy44NTkzNzUgLTQ3LjM5NDUzMSA3LjA1NDY4OCAtNTAuNzk2ODc1IDEzLjQ1MzEyNSAtNTAuNzk2ODc1IEwgMjMuMTg3NSAtNTAuNzk2ODc1IEMgMjkuNTgyMDMxIC01MC43OTY4NzUgMzIuNzgxMjUgLTQ3LjM5NDUzMSAzMi43ODEyNSAtNDAuNTkzNzUgTCAzMi43ODEyNSAtMzUuODc1IEwgMjIuNSAtMzUuODc1IEwgMjIuNSAtNDEuOTA2MjUgQyAyMi41IC00Mi4zMTI1IDIyLjM1MTU2MiAtNDIuNjcxODc1IDIyLjA2MjUgLTQyLjk4NDM3NSBDIDIxLjc4MTI1IC00My4yOTY4NzUgMjEuNDM3NSAtNDMuNDUzMTI1IDIxLjAzMTI1IC00My40NTMxMjUgTCAxNi4xNTYyNSAtNDMuNDUzMTI1IEMgMTUuNzUgLTQzLjQ1MzEyNSAxNS4zOTg0MzggLTQzLjI5Njg3NSAxNS4xMDkzNzUgLTQyLjk4NDM3NSBDIDE0LjgyODEyNSAtNDIuNjcxODc1IDE0LjY4NzUgLTQyLjMxMjUgMTQuNjg3NSAtNDEuOTA2MjUgTCAxNC42ODc1IC04LjE4NzUgQyAxNC42ODc1IC03Ljc4MTI1IDE0LjgyODEyNSAtNy40MjE4NzUgMTUuMTA5Mzc1IC03LjEwOTM3NSBDIDE1LjM5ODQzOCAtNi44MDQ2ODggMTUuNzUgLTYuNjU2MjUgMTYuMTU2MjUgLTYuNjU2MjUgTCAyMS4wMzEyNSAtNi42NTYyNSBDIDIxLjQzNzUgLTYuNjU2MjUgMjEuNzgxMjUgLTYuODA0Njg4IDIyLjA2MjUgLTcuMTA5Mzc1IEMgMjIuMzUxNTYyIC03LjQyMTg3NSAyMi41IC03Ljc4MTI1IDIyLjUgLTguMTg3NSBaIE0gMjIuNSAtOC4xODc1ICIvPjwvZz48L2c+PC9nPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMSI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoODAuMDkyOTksIDY2Ljc2OTc4MykiPjxnPjxwYXRoIGQ9Ik0gMTQuNjg3NSAtNTAuMDE1NjI1IEwgMTQuNjg3NSAwIEwgMy44NTkzNzUgMCBMIDMuODU5Mzc1IC01MC4wMTU2MjUgWiBNIDE0LjY4NzUgLTUwLjAxNTYyNSAiLz48L2c+PC9nPjwvZz48ZyBmaWxsPSIjZmZmZmZmIiBmaWxsLW9wYWNpdHk9IjEiPjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDEwMi45NzUzMDMsIDY2Ljc2OTc4MykiPjxnPjxwYXRoIGQ9Ik0gMTQuNjg3NSAtOC45Njg3NSBMIDI2LjY3MTg3NSAtOC45Njg3NSBMIDI2LjY3MTg3NSAwIEwgMy44NTkzNzUgMCBMIDMuODU5Mzc1IC01MC4wMTU2MjUgTCAyNi42NzE4NzUgLTUwLjAxNTYyNSBMIDI2LjY3MTg3NSAtNDEuMjAzMTI1IEwgMTQuNjg3NSAtNDEuMjAzMTI1IEwgMTQuNjg3NSAtMjkuNDUzMTI1IEwgMjUuOTA2MjUgLTI5LjQ1MzEyNSBMIDI1LjkwNjI1IC0yMC45NTMxMjUgTCAxNC42ODc1IC0yMC45NTMxMjUgWiBNIDE0LjY4NzUgLTguOTY4NzUgIi8+PC9nPjwvZz48L2c+PGcgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIxIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMzYuMDYxNzAxLCA2Ni43Njk3ODMpIj48Zz48cGF0aCBkPSJNIDMyLjU0Njg3NSAwIEwgMjEuNzE4NzUgMCBMIDIxLjcxODc1IC00MS41MTU2MjUgQyAyMS43MTg3NSAtNDEuOTI5Njg4IDIxLjU3ODEyNSAtNDIuMjg5MDYyIDIxLjI5Njg3NSAtNDIuNTkzNzUgQyAyMS4wMTU2MjUgLTQyLjkwNjI1IDIwLjY2NDA2MiAtNDMuMDYyNSAyMC4yNSAtNDMuMDYyNSBMIDE2LjA3ODEyNSAtNDMuMDYyNSBDIDE1LjY3MTg3NSAtNDMuMDYyNSAxNS4zMjAzMTIgLTQyLjkwNjI1IDE1LjAzMTI1IC00Mi41OTM3NSBDIDE0Ljc1IC00Mi4yODkwNjIgMTQuNjA5Mzc1IC00MS45Mjk2ODggMTQuNjA5Mzc1IC00MS41MTU2MjUgTCAxNC42MDkzNzUgMCBMIDMuNzgxMjUgMCBMIDMuNzgxMjUgLTQwLjU5Mzc1IEMgMy43ODEyNSAtNDcuMzk0NTMxIDYuOTc2NTYyIC01MC43OTY4NzUgMTMuMzc1IC01MC43OTY4NzUgTCAyMi45Njg3NSAtNTAuNzk2ODc1IEMgMjkuMzUxNTYyIC01MC43OTY4NzUgMzIuNTQ2ODc1IC00Ny4zOTQ1MzEgMzIuNTQ2ODc1IC00MC41OTM3NSBaIE0gMzIuNTQ2ODc1IDAgIi8+PC9nPjwvZz48L2c+PGcgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIxIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNzYuMDI4MTA2LCA2Ni43Njk3ODMpIj48Zz48cGF0aCBkPSJNIDIyLjUgLTguMTg3NSBMIDIyLjUgLTE1LjkyMTg3NSBMIDMyLjc4MTI1IC0xNS45MjE4NzUgTCAzMi43ODEyNSAtOS40Mzc1IEMgMzIuNzgxMjUgLTIuNjMyODEyIDI5LjU4MjAzMSAwLjc2NTYyNSAyMy4xODc1IDAuNzY1NjI1IEwgMTMuNDUzMTI1IDAuNzY1NjI1IEMgNy4wNTQ2ODggMC43NjU2MjUgMy44NTkzNzUgLTIuNjMyODEyIDMuODU5Mzc1IC05LjQzNzUgTCAzLjg1OTM3NSAtNDAuNTkzNzUgQyAzLjg1OTM3NSAtNDcuMzk0NTMxIDcuMDU0Njg4IC01MC43OTY4NzUgMTMuNDUzMTI1IC01MC43OTY4NzUgTCAyMy4xODc1IC01MC43OTY4NzUgQyAyOS41ODIwMzEgLTUwLjc5Njg3NSAzMi43ODEyNSAtNDcuMzk0NTMxIDMyLjc4MTI1IC00MC41OTM3NSBMIDMyLjc4MTI1IC0zNS44NzUgTCAyMi41IC0zNS44NzUgTCAyMi41IC00MS45MDYyNSBDIDIyLjUgLTQyLjMxMjUgMjIuMzUxNTYyIC00Mi42NzE4NzUgMjIuMDYyNSAtNDIuOTg0Mzc1IEMgMjEuNzgxMjUgLTQzLjI5Njg3NSAyMS40Mzc1IC00My40NTMxMjUgMjEuMDMxMjUgLTQzLjQ1MzEyNSBMIDE2LjE1NjI1IC00My40NTMxMjUgQyAxNS43NSAtNDMuNDUzMTI1IDE1LjM5ODQzOCAtNDMuMjk2ODc1IDE1LjEwOTM3NSAtNDIuOTg0Mzc1IEMgMTQuODI4MTI1IC00Mi42NzE4NzUgMTQuNjg3NSAtNDIuMzEyNSAxNC42ODc1IC00MS45MDYyNSBMIDE0LjY4NzUgLTguMTg3NSBDIDE0LjY4NzUgLTcuNzgxMjUgMTQuODI4MTI1IC03LjQyMTg3NSAxNS4xMDkzNzUgLTcuMTA5Mzc1IEMgMTUuMzk4NDM4IC02LjgwNDY4OCAxNS43NSAtNi42NTYyNSAxNi4xNTYyNSAtNi42NTYyNSBMIDIxLjAzMTI1IC02LjY1NjI1IEMgMjEuNDM3NSAtNi42NTYyNSAyMS43ODEyNSAtNi44MDQ2ODggMjIuMDYyNSAtNy4xMDkzNzUgQyAyMi4zNTE1NjIgLTcuNDIxODc1IDIyLjUgLTcuNzgxMjUgMjIuNSAtOC4xODc1IFogTSAyMi41IC04LjE4NzUgIi8+PC9nPjwvZz48L2c+PGcgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIxIj48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgyMTUuNDUzMzgzLCA2Ni43Njk3ODMpIj48Zz48cGF0aCBkPSJNIDE0LjY4NzUgLTguOTY4NzUgTCAyNi42NzE4NzUgLTguOTY4NzUgTCAyNi42NzE4NzUgMCBMIDMuODU5Mzc1IDAgTCAzLjg1OTM3NSAtNTAuMDE1NjI1IEwgMjYuNjcxODc1IC01MC4wMTU2MjUgTCAyNi42NzE4NzUgLTQxLjIwMzEyNSBMIDE0LjY4NzUgLTQxLjIwMzEyNSBMIDE0LjY4NzUgLTI5LjQ1MzEyNSBMIDI1LjkwNjI1IC0yOS40NTMxMjUgTCAyNS45MDYyNSAtMjAuOTUzMTI1IEwgMTQuNjg3NSAtMjAuOTUzMTI1IFogTSAxNC42ODc1IC04Ljk2ODc1ICIvPjwvZz48L2c+PC9nPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMSI+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjQ4LjUzOTc4MSwgNjYuNzY5NzgzKSI+PGc+PHBhdGggZD0iTSAzMS42MjUgLTM2Ljg3NSBMIDIxLjM0Mzc1IC0zNi44NzUgTCAyMS4zNDM3NSAtNDAuODI4MTI1IEMgMjEuMzQzNzUgLTQxLjIzNDM3NSAyMS4xOTUzMTIgLTQxLjU5Mzc1IDIwLjkwNjI1IC00MS45MDYyNSBDIDIwLjYyNSAtNDIuMjE4NzUgMjAuMjgxMjUgLTQyLjM3NSAxOS44NzUgLTQyLjM3NSBMIDE1LjYwOTM3NSAtNDIuMzc1IEMgMTUuMjAzMTI1IC00Mi4zNzUgMTQuODUxNTYyIC00Mi4yMTg3NSAxNC41NjI1IC00MS45MDYyNSBDIDE0LjI4MTI1IC00MS41OTM3NSAxNC4xNDA2MjUgLTQxLjIzNDM3NSAxNC4xNDA2MjUgLTQwLjgyODEyNSBMIDE0LjE0MDYyNSAtMzEuOTM3NSBDIDE0LjE0MDYyNSAtMzEuNTE5NTMxIDE0LjI4MTI1IC0zMS4xNTYyNSAxNC41NjI1IC0zMC44NDM3NSBDIDE0Ljg1MTU2MiAtMzAuNTM5MDYyIDE1LjIwMzEyNSAtMzAuMzkwNjI1IDE1LjYwOTM3NSAtMzAuMzkwNjI1IEwgMjIuNTc4MTI1IC0zMC4zOTA2MjUgQyAyOC45NjA5MzggLTMwLjI4NTE1NiAzMi4xNTYyNSAtMjYuODc4OTA2IDMyLjE1NjI1IC0yMC4xNzE4NzUgTCAzMi4xNTYyNSAtOS40Mzc1IEMgMzIuMTU2MjUgLTIuNjMyODEyIDI4Ljk2MDkzOCAwLjc2NTYyNSAyMi41NzgxMjUgMC43NjU2MjUgTCAxMy40NTMxMjUgMC43NjU2MjUgQyA3LjA1NDY4OCAwLjc2NTYyNSAzLjg1OTM3NSAtMi42MzI4MTIgMy44NTkzNzUgLTkuNDM3NSBMIDMuODU5Mzc1IC0xNC42MDkzNzUgTCAxNC4xNDA2MjUgLTE0LjYwOTM3NSBMIDE0LjE0MDYyNSAtOS4wNDY4NzUgQyAxNC4xNDA2MjUgLTguNjI4OTA2IDE0LjI4MTI1IC04LjI2NTYyNSAxNC41NjI1IC03Ljk1MzEyNSBDIDE0Ljg1MTU2MiAtNy42NDg0MzggMTUuMjAzMTI1IC03LjUgMTUuNjA5Mzc1IC03LjUgTCAyMC40MDYyNSAtNy41IEMgMjAuODIwMzEyIC03LjUgMjEuMTcxODc1IC03LjY0ODQzOCAyMS40NTMxMjUgLTcuOTUzMTI1IEMgMjEuNzM0Mzc1IC04LjI2NTYyNSAyMS44NzUgLTguNjI4OTA2IDIxLjg3NSAtOS4wNDY4NzUgTCAyMS44NzUgLTE4Ljg1OTM3NSBDIDIxLjg3NSAtMTkuMjczNDM4IDIxLjczNDM3NSAtMTkuNjMyODEyIDIxLjQ1MzEyNSAtMTkuOTM3NSBDIDIxLjE3MTg3NSAtMjAuMjUgMjAuODIwMzEyIC0yMC40MDYyNSAyMC40MDYyNSAtMjAuNDA2MjUgTCAxMy40NTMxMjUgLTIwLjQwNjI1IEMgNy4wNTQ2ODggLTIwLjQwNjI1IDMuODU5Mzc1IC0yMy44MDQ2ODggMy44NTkzNzUgLTMwLjYwOTM3NSBMIDMuODU5Mzc1IC00MC41OTM3NSBDIDMuODU5Mzc1IC00Ny4zOTQ1MzEgNy4wNTQ2ODggLTUwLjc5Njg3NSAxMy40NTMxMjUgLTUwLjc5Njg3NSBMIDIyLjAzMTI1IC01MC43OTY4NzUgQyAyOC40MjU3ODEgLTUwLjc5Njg3NSAzMS42MjUgLTQ3LjM5NDUzMSAzMS42MjUgLTQwLjU5Mzc1IFogTSAzMS42MjUgLTM2Ljg3NSAiLz48L2c+PC9nPjwvZz48L2c+PC9nPjwvc3ZnPg=="); }
+.credits { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.12); text-align: center; }
+.credits-logo { display: block; line-height: 0; }
+.logo-esciences { display: block; width: 150px; aspect-ratio: 420 / 135; background: var(--logo-esciences) center / contain no-repeat; }
+.credits-names { margin: 0; font-size: .86rem; color: #c9c9c9; }
+.credits-names strong { color: #fff; font-weight: 700; }
+.live-panel .credits { margin-top: 14px; padding-top: 10px; flex-direction: row; justify-content: center; gap: 16px; }
+.live-panel .logo-esciences { width: 120px; }
+
+/* ---------- Réduction des animations ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ======================= ACCUEIL ======================= -->
+<section id="screen-start" aria-labelledby="game-title">
+  <div class="world" id="world-start" aria-hidden="true"></div>
+  <div class="start-panel">
+    <div class="cube-row" aria-hidden="true" id="start-cubes"></div>
+    <h1 class="title" id="game-title"><span class="l1">Minecraft</span><span class="l2">Discovery</span></h1>
+    <p class="subtitle">Le défi des 10 blocs</p>
+    <p class="story">Tu arrives dans un monde inconnu. Au sommet de la colline, la <strong>Balise du savoir</strong> s’est éteinte. Pour la rallumer, il te faut <strong>10 blocs de connaissance</strong>. Chaque question t’en rapporte un.</p>
+    <ul class="rules" id="rules"></ul>
+    <div class="start-actions">
+      <button class="btn big" id="btn-start" type="button">Commencer l’aventure</button>
+      <button class="icon-btn sound-btn" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="waves" d="M15 8.5a5 5 0 0 1 0 7M17.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2.2" fill="none"/><path class="mute" d="M15 9l6 6M21 9l-6 6" stroke="currentColor" stroke-width="2.2"/></svg>
+        <span class="sound-text">Son coupé</span>
+      </button>
+    </div>
+    <footer class="credits">
+      <a class="credits-logo" href="https://www.esciences.be" target="_blank" rel="noopener" aria-label="Site eSCIENCES (nouvel onglet)"><span class="logo-esciences" aria-hidden="true"></span></a>
+      <p class="credits-names">Une création de <strong>Tommy Berben</strong></p>
+    </footer>
+    <p class="disclaimer">Jeu pédagogique non officiel, non affilié à Mojang Studios ni à Microsoft. Aucun compte, aucune donnée personnelle : seuls le pseudo tiré au sort et le score sont enregistrés.</p>
+  </div>
+</section>
+
+<!-- ======================= CONNEXION (fenêtre pas à pas) ======================= -->
+<dialog class="setup-dialog" id="dlg-setup" aria-label="Préparer ta partie">
+  <div class="player-setup" id="setup-step-1">
+    <p class="setup-step">Étape 1 sur 2</p>
+    <fieldset>
+      <legend>Choisis ton pseudo d’aventurier</legend>
+      <div class="pseudo-options" id="pseudo-options"></div>
+    </fieldset>
+    <div class="setup-row"><button class="btn stone small" type="button" id="btn-reroll">Autres pseudos</button></div>
+    <p class="setup-hint">Pas de vrai nom ici : ton pseudo est tiré au sort et c’est lui qui apparaîtra dans le classement.</p>
+    <div class="setup-nav">
+      <button class="btn stone small" type="button" id="btn-setup-cancel">Retour</button>
+      <button class="btn small" type="button" id="btn-setup-next">Suivant</button>
+    </div>
+  </div>
+  <div class="player-setup" id="setup-step-2" hidden>
+    <p class="setup-step">Étape 2 sur 2</p>
+    <h2 class="setup-title2">Prêt pour l’aventure ?</h2>
+    <p class="setup-recap">Ton pseudo : <strong id="setup-pseudo"></strong></p>
+    <p class="class-badge" id="class-badge" hidden></p>
+    <p class="setup-hint">Retiens bien ton pseudo : il te permet de te retrouver dans le classement.</p>
+    <div class="setup-nav">
+      <button class="btn stone small" type="button" id="btn-setup-back">Changer de pseudo</button>
+      <button class="btn small" type="button" id="btn-setup-go">C’est parti !</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ======================= JEU ======================= -->
+<section id="screen-game" hidden aria-label="Partie en cours">
+  <header class="hud">
+    <div>
+      <div class="progress-label"><span id="q-counter">Question 1/10</span><span class="streak" id="streak" hidden></span></div>
+      <div class="xpbar" role="progressbar" id="progress" aria-label="Progression" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><div class="xpfill" id="progress-fill"></div></div>
+    </div>
+    <div class="scorebox" id="scorebox"><small>Score</small><strong id="score">0</strong></div>
+    <button class="icon-btn sound-btn" type="button" aria-pressed="false" aria-label="Effets sonores">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="waves" d="M15 8.5a5 5 0 0 1 0 7M17.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2.2" fill="none"/><path class="mute" d="M15 9l6 6M21 9l-6 6" stroke="currentColor" stroke-width="2.2"/></svg>
+    </button>
+    <button class="icon-btn" type="button" id="btn-restart" aria-label="Recommencer la partie" title="Recommencer">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M4 12a8 8 0 1 0 2.6-5.9"/><path d="M4 3v5h5" stroke-linejoin="miter"/></svg>
+    </button>
+  </header>
+
+  <main class="game-main">
+    <div class="world" id="world-game" aria-hidden="true"></div>
+    <div class="quest">
+      <div class="card" id="card">
+        <div class="meta">
+          <span class="chip" id="chip-level">Facile</span>
+          <span class="chip" id="chip-points">500 pts</span>
+          <span class="chip reward" id="chip-reward"></span>
+        </div>
+        <h2 class="question" id="question" tabindex="-1"></h2>
+        <div class="torch" id="torch" aria-hidden="true">
+          <span class="torch-icon"></span>
+          <span class="torch-label" id="torch-label">Bonus éclair</span>
+          <div class="torch-bar"><div class="torch-fill" id="torch-fill"></div></div>
+        </div>
+        <div class="answers" role="group" aria-labelledby="question" id="answers"></div>
+        <p class="kbd-hint">Astuce : tu peux aussi répondre avec les touches 1, 2, 3 et 4.</p>
+      </div>
+      <div class="feedback" id="feedback" hidden></div>
+    </div>
+  </main>
+
+  <footer class="hotbar-wrap">
+    <ol class="hotbar" id="hotbar" aria-label="Inventaire des blocs collectés"></ol>
+  </footer>
+</section>
+
+<!-- ======================= FIN ======================= -->
+<section id="screen-end" hidden aria-labelledby="end-title">
+  <div class="world" id="world-end" aria-hidden="true"></div>
+  <div class="result">
+    <p class="eyebrow">Aventure terminée</p>
+    <h2 class="end-title" id="end-title" tabindex="-1"></h2>
+    <p class="end-power" id="end-power"></p>
+    <ul class="end-blocks" id="end-blocks" aria-hidden="true"></ul>
+    <div class="stats">
+      <div class="stat main"><span>Score</span><strong id="end-score">0</strong></div>
+      <div class="stat"><span>Bonnes réponses</span><strong id="end-correct">0/10</strong></div>
+      <div class="stat"><span>Meilleure série</span><strong id="end-streak">0</strong></div>
+    </div>
+    <p class="end-msg" id="end-msg"></p>
+    <div class="end-actions"><button class="btn big" type="button" id="btn-replay">Rejouer l’aventure</button></div>
+    <section class="board" id="board" hidden aria-labelledby="board-title">
+      <h3 id="board-title">Classement</h3>
+      <p class="board-status" id="board-status" aria-live="polite"></p>
+      <p class="board-stats" id="board-stats"></p>
+      <ol class="board-list" id="board-list"></ol>
+      <div class="board-actions"><button class="btn stone small" type="button" id="btn-board">Actualiser le classement</button></div>
+    </section>
+    <h3 class="recap-title">Ce que tu as appris</h3>
+    <ol class="recap" id="recap"></ol>
+    <div class="end-actions" style="margin-top:22px"><button class="btn stone" type="button" id="btn-replay-2">Rejouer</button></div>
+    <footer class="credits">
+      <a class="credits-logo" href="https://www.esciences.be" target="_blank" rel="noopener" aria-label="Site eSCIENCES (nouvel onglet)"><span class="logo-esciences" aria-hidden="true"></span></a>
+      <p class="credits-names">Une création de <strong>Tommy Berben</strong></p>
+    </footer>
+  </div>
+</section>
+
+<!-- ======================= TABLEAU (TBI) ======================= -->
+<section id="screen-board" hidden aria-labelledby="live-title">
+  <div class="world" id="world-board" aria-hidden="true"></div>
+  <div class="live-panel">
+    <p class="eyebrow">Minecraft Discovery</p>
+    <h1 class="end-title" id="live-title">Classement en direct</h1>
+    <p class="live-class">Classe <strong id="live-class"></strong></p>
+    <p class="live-stats" id="live-count"></p>
+    <div class="podium" id="podium"></div>
+    <ol class="board-list big" id="live-list"></ol>
+    <p class="live-join" id="live-join"></p>
+    <p class="live-updated" id="live-updated" aria-live="polite"></p>
+    <footer class="credits">
+      <a class="credits-logo" href="https://www.esciences.be" target="_blank" rel="noopener" aria-label="Site eSCIENCES (nouvel onglet)"><span class="logo-esciences" aria-hidden="true"></span></a>
+      <p class="credits-names">Une création de <strong>Tommy Berben</strong></p>
+    </footer>
+  </div>
+</section>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+<!-- Rempli par Google Apps Script quand le jeu est servi depuis le script (sinon ignoré). -->
+<script type="application/json" id="md-params">__PARAMS__</script>
+
+<script>
+(function () {
+'use strict';
+
+/* =========================================================
+   1. CONTENU DU JEU — c'est ici qu'on modifie les questions
+   ---------------------------------------------------------
+   niveau      : "facile", "moyen" ou "defi"
+   points      : points gagnés pour une bonne réponse
+   bloc        : bloc de récompense (voir la liste BLOCS plus bas)
+   reponses    : exactement 4 propositions
+   bonne       : position de la bonne réponse (0 = la 1re, 1 = la 2e…)
+   Les réponses sont mélangées automatiquement à chaque partie.
+   ========================================================= */
+const QUESTIONS = [
+  {
+    niveau: "facile", points: 500, bloc: "pierre",
+    question: "Comment s’appelle le personnage qu’on incarne par défaut depuis les débuts du jeu ?",
+    reponses: ["Steve", "Mario", "Link", "Sonic"],
+    bonne: 0,
+    explication: "Steve est le héros historique de Minecraft. Alex l’a rejoint en 2014, puis d’autres personnages ont été ajoutés. Tu peux aussi changer d’apparence grâce aux skins."
+  },
+  {
+    niveau: "facile", points: 500, bloc: "herbe",
+    question: "Dans quel mode de jeu faut-il récolter des ressources, manger et se protéger des monstres ?",
+    reponses: ["Le mode Survie", "Le mode Créatif", "Le mode Spectateur", "Le mode Vacances"],
+    bonne: 0,
+    explication: "En Survie, tu surveilles ta barre de vie et ta barre de faim. La nuit, les monstres apparaissent : mieux vaut construire un abri ! Un cycle jour-nuit complet dure 20 minutes. En Créatif, tu as tous les blocs à l’infini ; en Spectateur, tu observes en traversant les murs."
+  },
+  {
+    niveau: "facile", points: 500, bloc: "laine",
+    question: "En 2025, Minecraft est arrivé au cinéma. Quel acteur joue Steve dans le film ?",
+    reponses: ["Jack Black", "Ryan Reynolds", "Dwayne Johnson", "Tom Holland"],
+    bonne: 0,
+    explication: "C’est Jack Black qui incarne Steve dans « Minecraft, le film », sorti en avril 2025. Jason Momoa fait aussi partie de l’aventure."
+  },
+  {
+    niveau: "moyen", points: 750, bloc: "planches",
+    question: "Qui a créé Minecraft ?",
+    reponses: ["Markus « Notch » Persson", "Bill Gates", "Shigeru Miyamoto", "Steve Jobs"],
+    bonne: 0,
+    explication: "Notch, un développeur suédois, a commencé Minecraft seul, sur son temps libre. Il a ensuite fondé le studio Mojang, à Stockholm. Au passage : Shigeru Miyamoto, lui, est le papa de Mario !"
+  },
+  {
+    niveau: "moyen", points: 750, bloc: "fer",
+    question: "Quel record mondial détient Minecraft ?",
+    reponses: [
+      "C’est le jeu vidéo le plus vendu de l’histoire",
+      "C’est le tout premier jeu vidéo jamais créé",
+      "C’est le jeu le plus long à terminer",
+      "C’est le jeu qui compte le plus de niveaux"
+    ],
+    bonne: 0,
+    explication: "Avec plus de 350 millions d’exemplaires vendus (chiffre annoncé fin 2025), Minecraft est le jeu vidéo le plus vendu de tous les temps, selon le Guinness World Records."
+  },
+  {
+    niveau: "moyen", points: 750, bloc: "sable",
+    question: "En quelle année les joueurs ont-ils pu essayer Minecraft pour la première fois ?",
+    reponses: ["2009", "1999", "2015", "2020"],
+    bonne: 0,
+    explication: "La première version publique est sortie en mai 2009. Le jeu a ensuite évolué avec l’aide des joueurs jusqu’à la version officielle 1.0, en novembre 2011. Minecraft a donc plus de 15 ans !"
+  },
+  {
+    niveau: "moyen", points: 750, bloc: "redstone",
+    question: "Quelle entreprise a racheté Mojang, le studio de Minecraft, en 2014 ?",
+    reponses: ["Microsoft", "Nintendo", "Sony", "Apple"],
+    bonne: 0,
+    explication: "Microsoft a racheté Mojang pour 2,5 milliards de dollars. Depuis, Mojang et Microsoft développent aussi Minecraft Education, la version pensée pour l’école."
+  },
+  {
+    niveau: "defi", points: 1000, bloc: "obsidienne",
+    question: "Quel était le nom d’origine de Minecraft ?",
+    reponses: ["Cave Game", "Blockland", "The Mine", "CraftWorld"],
+    bonne: 0,
+    explication: "Au début, Notch appelait son projet « Cave Game », le jeu de la grotte. Il l’a ensuite renommé « Minecraft: Order of the Stone », puis tout simplement « Minecraft »."
+  },
+  {
+    niveau: "defi", points: 1000, bloc: "or",
+    question: "En combien de temps la toute première version de Minecraft a-t-elle été développée ?",
+    reponses: ["6 jours", "6 minutes", "6 heures", "6 mois"],
+    bonne: 0,
+    explication: "Notch a codé la première version en 6 jours environ, du 10 au 16 mai 2009, et l’a partagée en ligne dès le lendemain. Le jeu a ensuite grandi pendant des années grâce aux retours des joueurs."
+  },
+  {
+    niveau: "defi", points: 1000, bloc: "diamant",
+    question: "Le célèbre creeper est né d’une drôle d’histoire. Laquelle ?",
+    reponses: [
+      "Une erreur de programmation en voulant créer un cochon",
+      "Le dessin gagnant d’un concours pour enfants",
+      "Un personnage d’un vieux dessin animé",
+      "Une plante carnivore découverte en Amazonie"
+    ],
+    bonne: 0,
+    explication: "En programmant le cochon, Notch s’est trompé dans les dimensions : la créature est sortie haute et étroite au lieu d’être longue. Il l’a gardée, l’a rendue verte… et explosive ! En anglais, « to creep » veut dire se faufiler."
+  }
+];
+
+/* =========================================================
+   2. RÉGLAGES DU SCORE
+   ========================================================= */
+const SCORE = {
+  delaiLecture: 6,        // secondes pendant lesquelles le bonus éclair reste maximal
+  dureeBonus: 20,         // secondes pour que le bonus éclair descende ensuite à 0
+  partBonusEclair: 0.30,  // bonus éclair max = 30 % des points de la question
+  bonusSerie: 50,         // +50 par bonne réponse enchaînée…
+  bonusSerieMax: 150      // …plafonné à +150
+};
+
+/* =========================================================
+   2 bis. CLASSEMENT EN LIGNE (Google Sheets)
+   Colle ici l'URL de ton application Web Apps Script (elle se
+   termine par /exec). Laisse "" pour jouer sans classement.
+   ========================================================= */
+const CLASSEMENT = {
+  url: "https://script.google.com/macros/s/AKfycby91wj74TW4mML_GZBiP5WUOYT5JYXOG0wa2NndwH3jU5fNRCg_90q4iSZfHG-2N4r6/exec",
+  classeParDefaut: "LUDOVIA",
+  taille: 10,            // nombre de joueurs affichés en fin de partie
+  tailleTableau: 15,     // nombre de joueurs affichés sur l'écran du TBI
+  rafraichissement: 5    // secondes entre deux mises à jour de l'écran du TBI
+};
+/* Pseudos tirés au sort (les mêmes listes figurent dans Code.gs) */
+const PSEUDO_NOMS = ["Creeper", "Golem", "Mineur", "Bâtisseur", "Explorateur", "Renard", "Axolotl", "Lama",
+  "Panda", "Ocelot", "Mouton", "Dragon", "Loup", "Poulpe", "Villageois", "Lapin"];
+const PSEUDO_ADJ = ["Turquoise", "Rapide", "Malin", "Agile", "Brillant", "Cosmique", "Électrique", "Mystérieux",
+  "Intrépide", "Cubique", "Lumineux", "Rusé", "Doré", "Légendaire", "Pixelisé", "Courageux"];
+
+/* Titres de fin (selon le nombre de bonnes réponses) */
+const TITRES = [
+  { min: 10, titre: "Légende de la Balise", message: "Sans faute ! La Balise du savoir brille de mille feux. Tu connais ce monde comme ta poche." },
+  { min: 8, titre: "Maître bâtisseur", message: "Superbe aventure ! Il ne manque presque rien à ta Balise. Relis le récap pour décrocher le sans-faute." },
+  { min: 6, titre: "Explorateur chevronné", message: "Belle exploration ! Les explications ci-dessous t’aideront à récolter les derniers blocs." },
+  { min: 4, titre: "Mineur en herbe", message: "Bon début ! Chaque bloc fissuré cache une info utile : jette un œil au récap, puis retente ta chance." },
+  { min: 0, titre: "Apprenti aventurier", message: "Toute grande aventure commence quelque part. Tu viens de découvrir 10 choses sur Minecraft : relis-les et relance la partie !" }
+];
+
+/* Blocs de récompense */
+const BLOCS = {
+  pierre:     { nom: "Pierre",           couleur: "#7f7f7f" },
+  herbe:      { nom: "Bloc d’herbe",     couleur: "#5fa83a" },
+  laine:      { nom: "Laine cyan",       couleur: "#2aa3b5" },
+  planches:   { nom: "Planches",         couleur: "#b08850" },
+  fer:        { nom: "Bloc de fer",      couleur: "#d8d8d8" },
+  sable:      { nom: "Sable",            couleur: "#dbcf8e" },
+  redstone:   { nom: "Bloc de redstone", couleur: "#b81c12" },
+  obsidienne: { nom: "Obsidienne",       couleur: "#1d1530" },
+  or:         { nom: "Bloc d’or",        couleur: "#f5d33b" },
+  diamant:    { nom: "Bloc de diamant",  couleur: "#5ee0d6" },
+  fissure:    { nom: "Bloc fissuré",     couleur: "#8a8a8a" }
+};
+
+const NIVEAUX = { facile: "Facile", moyen: "Intermédiaire", defi: "Défi" };
+const BRAVO = ["Bien joué !", "Excellent !", "Bloc récolté !", "Tu gères !", "Parfait !", "En plein dans le mille !"];
+const OUPS = ["Pas cette fois…", "Presque !", "Raté, mais tu progresses", "Oups ! On apprend en minant"];
+const SHAPES = ["◆", "●", "▲", "■"];
+const ANS_CLASS = ["a-wood", "a-lapis", "a-gold", "a-ame"];
+const PYR_POS = [[0,0],[1,0],[2,0],[3,0],[0.5,1],[1.5,1],[2.5,1],[1,2],[2,2],[1.5,3]];
+
+/* =========================================================
+   3. TEXTURES PIXEL ART (générées, aucun fichier externe)
+   ========================================================= */
+const TEX = {};   // textures plates 16×16 (data URL)
+const CUBE = {};  // icônes de cubes isométriques (data URL)
+const CANV = {};  // canvases sources
+
+function rng(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = v => Math.max(0, Math.min(255, v + amt));
+  return "#" + [c(n >> 16), c((n >> 8) & 255), c(n & 255)].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+function paint(seed, fn, w, h) {
+  w = w || 16; h = h || 16;
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const ctx = cv.getContext("2d"); const r = rng(seed);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const col = fn(x, y, r);
+    if (col) { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1); }
+  }
+  return cv;
+}
+const pick = (arr, r) => arr[Math.floor(r() * arr.length)];
+const noise = (seed, pal) => paint(seed, (x, y, r) => pick(pal, r));
+
+function cobble(seed, pal, edge) {
+  const r = rng(seed); const pts = [];
+  for (let i = 0; i < 8; i++) pts.push([r() * 16, r() * 16, pal[i % pal.length]]);
+  return paint(seed + 1, (x, y, rr) => {
+    let d1 = 1e9, d2 = 1e9, c = pal[0];
+    for (const p of pts) for (const ox of [-16, 0, 16]) for (const oy of [-16, 0, 16]) {
+      const dx = x + .5 - (p[0] + ox), dy = y + .5 - (p[1] + oy), d = Math.hypot(dx, dy);
+      if (d < d1) { d2 = d1; d1 = d; c = p[2]; } else if (d < d2) d2 = d;
+    }
+    if (d2 - d1 < 1.1) return edge;
+    return rr() < .2 ? shade(c, rr() < .5 ? -12 : 10) : c;
+  });
+}
+function bevel(seed, base, hi, lo, spec, specRate) {
+  return paint(seed, (x, y, r) => {
+    if (x === 0 || y === 0) return hi;
+    if (x === 15 || y === 15) return lo;
+    if (x === 1 || y === 1) return shade(base, 16);
+    if (x === 14 || y === 14) return shade(base, -18);
+    if (spec && r() < (specRate || .06)) return spec;
+    return r() < .25 ? shade(base, r() < .5 ? -8 : 8) : base;
+  });
+}
+
+function buildTextures() {
+  const DIRT = ["#86603c", "#79552f", "#966c44", "#6a4a2a"];
+  const GRASS = ["#5fa83a", "#6bb846", "#549a32", "#78c050"];
+  const grassTop = noise(11, GRASS);
+  const heights = [3,4,3,2,3,4,5,3,2,3,4,4,3,2,4,3];
+  const grassSide = paint(12, (x, y, r) => {
+    if (y < heights[x]) return pick(GRASS, r);
+    if (y === heights[x] && r() < .5) return "#4b8a2c";
+    return pick(DIRT, r);
+  });
+  const dirt = noise(13, DIRT);
+  const stone = cobble(21, ["#8a8a8a", "#7a7a7a", "#969696", "#6e6e6e"], "#4f4f4f");
+  const cobbleLight = cobble(22, ["#bdbdbd", "#a8a8a8", "#cfcfcf", "#9b9b9b"], "#6a6a6a");
+  const wool = paint(31, (x, y, r) => {
+    const base = pick(["#2aa3b5", "#259aa9", "#31b0c2"], r);
+    return ((x + y * 2) % 5 === 0) ? shade(base, 18) : ((x * 3 + y) % 7 === 0 ? shade(base, -16) : base);
+  });
+  const planks = paint(41, (x, y, r) => {
+    const row = Math.floor(y / 4);
+    if (y % 4 === 3) return "#6e4f28";
+    if ((x + row * 5) % 16 === 0) return "#7d5a2e";
+    if ((x + row * 3) % 7 === 0 && y % 4 === 1 && r() < .5) return "#8f6a38";
+    return pick(["#b08850", "#a27b45", "#bb935a", "#a98249"], r);
+  });
+  const iron = bevel(51, "#d4d4d4", "#f4f4f4", "#9c9c9c", "#bcbcbc", .1);
+  const gold = bevel(52, "#f5cf35", "#fff3a0", "#b98a10", "#ffe56b", .1);
+  const diamond = bevel(53, "#55d9cf", "#c8fff9", "#24918a", "#9cf6ee", .12);
+  const sand = noise(61, ["#dbcf8e", "#e3d89c", "#d1c27f", "#e8dea8", "#d6c886"]);
+  const redstone = paint(71, (x, y, r) => {
+    const v = r();
+    if (v < .07) return "#ff5a45";
+    if (v < .14) return "#6d0b05";
+    return pick(["#b81c12", "#a3150c", "#c4251a", "#9b120a"], r);
+  });
+  const obsidian = paint(81, (x, y, r) => {
+    const v = r();
+    if (v < .07) return "#5a3f88";
+    if (v < .14) return "#3a2860";
+    return pick(["#140f20", "#1d1530", "#0f0b18", "#181226"], r);
+  });
+  const crackSet = new Set();
+  (function () {
+    const r = rng(91);
+    let x = 7, y = 0;
+    while (y < 16) { crackSet.add(x + "," + y); y++; x += r() < .33 ? -1 : (r() < .5 ? 1 : 0); x = Math.max(1, Math.min(14, x)); }
+    x = 0; y = 9;
+    while (x < 9) { crackSet.add(x + "," + y); x++; y += r() < .3 ? -1 : (r() < .4 ? 1 : 0); }
+    x = 15; y = 4;
+    while (x > 9) { crackSet.add(x + "," + y); x--; y += r() < .4 ? 1 : 0; }
+  })();
+  const cracked = paint(92, (x, y, r) => {
+    if (crackSet.has(x + "," + y)) return "#3d3d3d";
+    if (crackSet.has((x - 1) + "," + y) && r() < .6) return "#666";
+    return pick(["#9a9a9a", "#8f8f8f", "#a3a3a3", "#949494"], r);
+  });
+  const beacon = paint(101, (x, y, r) => {
+    if (x === 0 || y === 0 || x === 15 || y === 15) return "#e4fdff";
+    if (x === 1 || y === 1 || x === 14 || y === 14) return "#8fd8e0";
+    if (x === 2 || y === 2 || x === 13 || y === 13) return "#4d8f99";
+    return pick(["#13242c", "#182c35", "#10202a"], r);
+  });
+
+  // Collines (silhouette pixel art)
+  const hills = (function () {
+    const W = 96, H = 28, r = rng(111);
+    const back = [], front = [];
+    let hb = 10, hf = 16;
+    for (let x = 0; x < W; x++) {
+      if (x % 6 === 0) hb = Math.max(4, Math.min(16, hb + Math.round((r() - .5) * 6)));
+      if (x % 4 === 0) hf = Math.max(12, Math.min(24, hf + Math.round((r() - .5) * 5)));
+      back.push(hb); front.push(hf);
+    }
+    // raccord pour la répétition horizontale
+    for (let i = 0; i < 6; i++) { back[W - 1 - i] = back[i]; front[W - 1 - i] = front[i]; }
+    return paint(112, (x, y, rr) => {
+      if (y >= front[x]) return y === front[x] ? "#5d9a3e" : (rr() < .2 ? "#3b7329" : "#427d2f");
+      if (y >= back[x]) return y === back[x] ? "#8fbf8a" : "#7aab7a";
+      return null;
+    }, W, H);
+  })();
+
+  // Héros original (explorateur au casque)
+  const HERO = [
+    "..HHHH..",
+    ".HHLLHH.",
+    "HHHHHHHH",
+    ".SSSSSS.",
+    ".SESSES.",
+    ".SSSSSS.",
+    ".SSMMSS.",
+    "RRRRRRRR",
+    "SGGRGGGS",
+    "SGGGGGGS",
+    "SGTTTTGS",
+    ".PPPPPP.",
+    ".PP..PP.",
+    ".KK..KK."
+  ];
+  const HC = { H: "#f2c230", L: "#fff7c2", S: "#e0a87a", E: "#2b1d14", M: "#9a4a3a", R: "#c0392b", G: "#3e7d4a", T: "#5b3a1e", P: "#6b4a2b", K: "#2a2a2a" };
+  const hero = paint(1, (x, y) => HC[HERO[y][x]] || null, 8, 14);
+
+  Object.assign(CANV, {
+    stone, grassTop, grassSide, dirt, wool, planks, iron, gold, diamond, sand, redstone, obsidian, cracked
+  });
+  const url = cv => cv.toDataURL("image/png");
+  Object.assign(TEX, {
+    pierre: url(stone), herbe: url(grassSide), laine: url(wool), planches: url(planks), fer: url(iron),
+    sable: url(sand), redstone: url(redstone), obsidienne: url(obsidian), or: url(gold),
+    diamant: url(diamond), fissure: url(cracked)
+  });
+
+  const root = document.documentElement.style;
+  root.setProperty("--tex-dirt", `url(${url(dirt)})`);
+  root.setProperty("--tex-grass-side", `url(${url(grassSide)})`);
+  root.setProperty("--tex-hills", `url(${url(hills)})`);
+  root.setProperty("--tex-beacon", `url(${url(beacon)})`);
+  root.setProperty("--tex-hero", `url(${url(hero)})`);
+  root.setProperty("--tex-cobble-light", `url(${url(cobbleLight)})`);
+
+  // Cubes isométriques
+  const faces = {
+    pierre: [stone, stone], herbe: [grassTop, grassSide], laine: [wool, wool], planches: [planks, planks],
+    fer: [iron, iron], sable: [sand, sand], redstone: [redstone, redstone], obsidienne: [obsidian, obsidian],
+    or: [gold, gold], diamant: [diamond, diamond], fissure: [cracked, cracked]
+  };
+  for (const k in faces) CUBE[k] = isoCube(faces[k][0], faces[k][1], 96);
+  document.documentElement.classList.add("tex-ok");
+}
+
+function isoCube(top, side, W) {
+  const h = W / 2, S = Math.round(W * .56);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = Math.ceil(h + S);
+  const ctx = cv.getContext("2d"); ctx.imageSmoothingEnabled = false;
+  const face = (tex, a, b, c, d, e, f, dark) => {
+    ctx.setTransform(a, b, c, d, e, f);
+    ctx.drawImage(tex, 0, 0);
+    if (dark) { ctx.fillStyle = `rgba(0,0,0,${dark})`; ctx.fillRect(0, 0, 16, 16); }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  };
+  face(side, W / 32, h / 32, 0, S / 16, 0, h / 2, .2);
+  face(side, W / 32, -h / 32, 0, S / 16, W / 2, h, .4);
+  face(top, W / 32, -h / 32, W / 32, h / 32, 0, h / 2, 0);
+  // fine arête claire
+  ctx.strokeStyle = "rgba(255,255,255,.25)"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(W / 2, h); ctx.lineTo(W / 2, h + S); ctx.stroke();
+  return cv.toDataURL("image/png");
+}
+
+/* Icône de bloc : cube si disponible, sinon carré de couleur */
+function cubeHTML(key, cls) {
+  if (CUBE[key]) return `<img class="${cls || ""}" src="${CUBE[key]}" alt="">`;
+  return `<span class="fallback ${cls || ""}" style="display:inline-block;background:${BLOCS[key].couleur}"></span>`;
+}
+
+/* =========================================================
+   4. SONS (synthétisés, désactivés par défaut)
+   ========================================================= */
+const Sound = {
+  ctx: null, on: false,
+  ensure() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { this.ctx = new AC(); } catch (e) { return null; }
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume();
+    return this.ctx;
+  },
+  note(f, d, when, type, vol) {
+    if (!this.on) return;
+    const c = this.ensure(); if (!c) return;
+    const t = c.currentTime + (when || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "square"; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || .05, t + .01);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + d + .03);
+  },
+  good() { [523, 659, 784, 1047].forEach((f, i) => this.note(f, .14, i * .07)); },
+  bad() { this.note(220, .2, 0, "sawtooth", .04); this.note(165, .3, .13, "sawtooth", .04); },
+  click() { this.note(880, .05, 0, "square", .03); },
+  place() { this.note(120, .14, 0, "triangle", .14); },
+  fanfare() { [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => this.note(f, .2, i * .12, "square", .045)); }
+};
+
+/* =========================================================
+   5. MONDE (scène)
+   ========================================================= */
+const SKY = [
+  [0,    "#7cc4ff", "#d6f0ff"],
+  [0.45, "#5aaaf0", "#c4e8ff"],
+  [0.72, "#f08a55", "#ffd59a"],
+  [0.88, "#3b2f6b", "#c0607a"],
+  [1,    "#0c1330", "#2b3266"]
+];
+const lerp = (a, b, t) => a + (b - a) * t;
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+  const ch = s => [(s >> 16) & 255, (s >> 8) & 255, s & 255];
+  const A = ch(pa), B = ch(pb);
+  return "#" + A.map((v, i) => Math.round(lerp(v, B[i], t)).toString(16).padStart(2, "0")).join("");
+}
+function skyAt(p) {
+  for (let i = 0; i < SKY.length - 1; i++) {
+    const [p0, t0, b0] = SKY[i], [p1, t1, b1] = SKY[i + 1];
+    if (p <= p1) { const t = (p - p0) / (p1 - p0); return [mixHex(t0, t1, t), mixHex(b0, b1, t)]; }
+  }
+  return [SKY[SKY.length - 1][1], SKY[SKY.length - 1][2]];
+}
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function buildWorld(el) {
+  el.innerHTML =
+    '<div class="w-stars"></div><div class="w-sun"></div><div class="w-moon"></div>' +
+    '<div class="w-cloud c1"></div><div class="w-cloud c2"></div><div class="w-cloud c3"></div>' +
+    '<div class="w-hills"></div><div class="w-pyr"><div class="w-beam"></div></div>' +
+    '<div class="w-hero"></div><div class="w-ground"></div>';
+  const pyr = el.querySelector(".w-pyr");
+  const slots = PYR_POS.map(p => {
+    const s = document.createElement("div");
+    s.className = "slot empty";
+    s.style.setProperty("--x", p[0]); s.style.setProperty("--y", p[1]);
+    pyr.appendChild(s); return s;
+  });
+  const beacon = document.createElement("div");
+  beacon.className = "beacon"; beacon.style.setProperty("--x", 1.5); beacon.style.setProperty("--y", 4);
+  pyr.appendChild(beacon);
+  return {
+    el, pyr, slots, beacon,
+    beam: el.querySelector(".w-beam"), sun: el.querySelector(".w-sun"),
+    moon: el.querySelector(".w-moon"), hero: el.querySelector(".w-hero")
+  };
+}
+function setSky(w, p) {
+  const [top, bot] = skyAt(p);
+  w.el.style.setProperty("--sky-top", top);
+  w.el.style.setProperty("--sky-bot", bot);
+  w.el.style.setProperty("--night", clamp((p - .8) / .2, 0, 1).toFixed(3));
+  const s = Math.min(p / .86, 1);
+  w.sun.style.left = (8 + 72 * s) + "%";
+  w.sun.style.top = (46 - 32 * Math.sin(Math.PI * Math.min(s, .999))) + "%";
+  w.sun.style.opacity = 1 - clamp((p - .8) / .1, 0, 1);
+  w.moon.style.opacity = clamp((p - .88) / .1, 0, 1);
+}
+function setSlot(w, i, key, ok, animate) {
+  const s = w.slots[i];
+  s.className = "slot filled " + (ok ? "ok" : "ko");
+  s.style.backgroundColor = BLOCS[key].couleur;
+  if (TEX[key]) s.style.backgroundImage = `url(${TEX[key]})`;
+  if (animate && !reduceMotion()) {
+    s.classList.add("drop");
+    setTimeout(() => sparks(w, s, ok), 260);
+  }
+}
+function markCurrentSlot(w, i) {
+  w.slots.forEach((s, j) => s.classList.toggle("current", j === i && s.classList.contains("empty")));
+}
+function sparks(w, slot, ok) {
+  const colors = ok ? ["#fff7a8", "#a5f25a", "#ffffff", "#ffd23f"] : ["#bdbdbd", "#8a8a8a", "#ffffff"];
+  const n = ok ? 14 : 7;
+  for (let i = 0; i < n; i++) {
+    const sp = document.createElement("span");
+    sp.className = "spark";
+    const a = Math.random() * Math.PI * 2, d = 25 + Math.random() * (ok ? 45 : 20);
+    sp.style.left = `calc(${slot.style.getPropertyValue("--x")} * var(--t) + var(--t) * .4)`;
+    sp.style.bottom = `calc(${slot.style.getPropertyValue("--y")} * var(--t) + var(--t) * .4)`;
+    sp.style.setProperty("--dx", Math.cos(a) * d + "px");
+    sp.style.setProperty("--dy", Math.sin(a) * d + "px");
+    sp.style.setProperty("--c", colors[i % colors.length]);
+    w.pyr.appendChild(sp);
+    setTimeout(() => sp.remove(), 800);
+  }
+}
+
+/* =========================================================
+   6. LOGIQUE DU JEU
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const reduceMq = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+const reduceMotion = () => !!(reduceMq && reduceMq.matches);
+const fmt = n => { try { return n.toLocaleString("fr-BE"); } catch (e) { return String(n); } };
+
+const screens = { start: $("screen-start"), game: $("screen-game"), end: $("screen-end"), board: $("screen-board") };
+const ui = {
+  counter: $("q-counter"), progress: $("progress"), progressFill: $("progress-fill"),
+  score: $("score"), scorebox: $("scorebox"), streak: $("streak"),
+  card: $("card"), level: $("chip-level"), points: $("chip-points"), reward: $("chip-reward"),
+  question: $("question"), answers: $("answers"), feedback: $("feedback"),
+  torch: $("torch"), torchFill: $("torch-fill"), torchLabel: $("torch-label"),
+  hotbar: $("hotbar"), live: $("live")
+};
+
+const state = {
+  playing: false, index: 0, score: 0, correct: 0, streak: 0, bestStreak: 0,
+  answers: [], orders: [], locked: true, t0: 0, raf: 0, token: 0,
+  gameId: "", gameStart: 0, sent: false
+};
+let worldGame = null, hbSlots = [], answerBtns = [];
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function speedFactor(t) {
+  if (t <= SCORE.delaiLecture) return 1;
+  return Math.max(0, 1 - (t - SCORE.delaiLecture) / SCORE.dureeBonus);
+}
+function show(name) {
+  for (const k in screens) screens[k].hidden = k !== name;
+  window.scrollTo(0, 0);
+}
+
+/* ----- Boutons de réponse (créés une seule fois) ----- */
+function buildAnswerButtons() {
+  ui.answers.innerHTML = "";
+  answerBtns = SHAPES.map((sh, k) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "ans " + ANS_CLASS[k];
+    b.innerHTML = `<span class="shape" aria-hidden="true">${sh}</span><span class="ans-text"></span><span class="mark" hidden></span><span class="key" aria-hidden="true">${k + 1}</span>`;
+    b.addEventListener("click", () => choose(k));
+    ui.answers.appendChild(b);
+    return b;
+  });
+}
+
+/* ----- Inventaire ----- */
+function buildHotbar() {
+  ui.hotbar.innerHTML = "";
+  hbSlots = QUESTIONS.map((q, i) => {
+    const li = document.createElement("li");
+    li.className = "hb-slot";
+    li.innerHTML = `<span class="n" aria-hidden="true">${i + 1}</span><span class="sr-only">Bloc ${i + 1} : à découvrir</span>`;
+    ui.hotbar.appendChild(li);
+    return li;
+  });
+}
+function fillHotbar(i, key, ok) {
+  const li = hbSlots[i];
+  li.innerHTML = cubeHTML(key) +
+    `<span class="n ${ok ? "ok" : "ko"}" aria-hidden="true">${ok ? "✔" : "✘"}</span>` +
+    `<span class="sr-only">Bloc ${i + 1} : ${BLOCS[key].nom}, ${ok ? "réussi" : "fissuré"}</span>`;
+  li.classList.add("pop");
+}
+function markHotbar(i) { hbSlots.forEach((s, j) => s.classList.toggle("current", j === i)); }
+
+/* ----- Démarrer / recommencer ----- */
+function startGame() {
+  cancelAnimationFrame(state.raf);
+  state.token++;
+  Object.assign(state, {
+    playing: true, index: 0, score: 0, correct: 0, streak: 0, bestStreak: 0,
+    answers: [], locked: true, t0: 0,
+    gameId: Math.random().toString(36).slice(2, 10) + Date.now().toString(36),
+    gameStart: performance.now(), sent: false
+  });
+  $("board").hidden = true;
+  state.orders = QUESTIONS.map(() => shuffle([0, 1, 2, 3]));
+  worldGame = buildWorld($("world-game"));
+  buildHotbar();
+  ui.score.textContent = "0";
+  ui.streak.hidden = true;
+  show("game");
+  showQuestion(0);
+}
+
+function showQuestion(i) {
+  const q = QUESTIONS[i], order = state.orders[i], token = ++state.token;
+  state.index = i; state.locked = true;
+  cancelAnimationFrame(state.raf);
+
+  ui.counter.textContent = `Question ${i + 1}/${QUESTIONS.length}`;
+  ui.progress.setAttribute("aria-valuenow", i);
+  ui.progress.setAttribute("aria-valuetext", `Question ${i + 1} sur ${QUESTIONS.length}`);
+  ui.progressFill.style.width = (i / QUESTIONS.length * 100) + "%";
+
+  ui.level.textContent = NIVEAUX[q.niveau] || q.niveau;
+  ui.level.className = "chip " + q.niveau;
+  ui.points.textContent = fmt(q.points) + " pts";
+  ui.reward.innerHTML = cubeHTML(q.bloc) + `<span>Récompense : ${BLOCS[q.bloc].nom}</span>`;
+  ui.question.textContent = q.question;
+
+  answerBtns.forEach((b, k) => {
+    const orig = order[k];
+    b.className = "ans " + ANS_CLASS[k];
+    b.disabled = false;
+    b.dataset.orig = orig;
+    b.querySelector(".ans-text").textContent = q.reponses[orig];
+    const m = b.querySelector(".mark"); m.textContent = ""; m.hidden = true;
+  });
+
+  ui.feedback.hidden = true; ui.feedback.innerHTML = "";
+  ui.torch.classList.remove("out");
+  ui.torchFill.style.transform = "scaleX(1)";
+  ui.torchLabel.textContent = "Bonus éclair";
+
+  ui.card.classList.remove("enter", "shake"); void ui.card.offsetWidth; ui.card.classList.add("enter");
+
+  markHotbar(i);
+  markCurrentSlot(worldGame, i);
+  setSky(worldGame, i / QUESTIONS.length);
+
+  window.scrollTo({ top: 0, behavior: "auto" });
+  ui.question.focus({ preventScroll: true });
+
+  // Petit délai : évite qu'un double tap sur « Suivant » réponde par accident
+  setTimeout(() => {
+    if (token !== state.token || !state.playing) return;
+    state.locked = false;
+    state.t0 = performance.now();
+    tick();
+  }, 350);
+}
+
+function tick() {
+  if (state.locked) return;
+  const t = (performance.now() - state.t0) / 1000;
+  const f = speedFactor(t);
+  ui.torchFill.style.transform = `scaleX(${f})`;
+  if (f > 0) { state.raf = requestAnimationFrame(tick); }
+  else { ui.torch.classList.add("out"); ui.torchLabel.textContent = "Prends ton temps"; }
+}
+
+function choose(k) {
+  if (state.locked || !state.playing) return;
+  state.locked = true;                       // verrou anti double-clic
+  cancelAnimationFrame(state.raf);
+
+  const i = state.index, q = QUESTIONS[i];
+  const t = (performance.now() - state.t0) / 1000;
+  const orig = +answerBtns[k].dataset.orig;
+  const ok = orig === q.bonne;
+
+  let base = 0, speed = 0, serie = 0;
+  if (ok) {
+    state.correct++; state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    base = q.points;
+    speed = Math.round(q.points * SCORE.partBonusEclair * speedFactor(t));
+    serie = state.streak >= 2 ? Math.min(SCORE.bonusSerie * (state.streak - 1), SCORE.bonusSerieMax) : 0;
+  } else {
+    state.streak = 0;
+  }
+  const gain = base + speed + serie;
+  state.score += gain;
+  state.answers[i] = { orig, ok, gain, base, speed, serie, temps: t };
+
+  // Marquage des réponses (icône + texte, pas seulement la couleur)
+  answerBtns.forEach((b, j) => {
+    b.disabled = true;
+    const o = +b.dataset.orig, m = b.querySelector(".mark");
+    if (o === q.bonne) { b.classList.add("is-correct"); m.textContent = j === k ? "✔ Ta réponse" : "✔ Bonne réponse"; m.hidden = false; }
+    else if (j === k) { b.classList.add("is-wrong"); m.textContent = "✘ Ta réponse"; m.hidden = false; }
+    else b.classList.add("is-dim");
+  });
+
+  const key = ok ? q.bloc : "fissure";
+  setSlot(worldGame, i, key, ok, true);
+  markCurrentSlot(worldGame, -1);
+  worldGame.beacon.style.setProperty("--glow", state.correct / QUESTIONS.length);
+  fillHotbar(i, key, ok);
+  ui.progressFill.style.width = ((i + 1) / QUESTIONS.length * 100) + "%";
+  ui.progress.setAttribute("aria-valuenow", i + 1);
+
+  // Score + animations
+  ui.score.textContent = fmt(state.score);
+  if (gain > 0) {
+    ui.scorebox.classList.remove("bump"); void ui.scorebox.offsetWidth; ui.scorebox.classList.add("bump");
+    if (!reduceMotion()) {
+      const fl = document.createElement("span");
+      fl.className = "float-pts"; fl.textContent = "+" + fmt(gain);
+      ui.scorebox.appendChild(fl); setTimeout(() => fl.remove(), 1200);
+    }
+  }
+  ui.streak.hidden = state.streak < 2;
+  ui.streak.textContent = "Série ×" + state.streak;
+
+  if (ok) {
+    worldGame.hero.classList.remove("jump"); void worldGame.hero.offsetWidth; worldGame.hero.classList.add("jump");
+    Sound.good(); setTimeout(() => Sound.place(), 250);
+  } else {
+    ui.card.classList.remove("enter", "shake"); void ui.card.offsetWidth; ui.card.classList.add("shake");
+    Sound.bad(); setTimeout(() => Sound.place(), 250);
+  }
+
+  renderFeedback(i, ok, key, base, speed, serie, gain);
+}
+
+function renderFeedback(i, ok, key, base, speed, serie, gain) {
+  const q = QUESTIONS[i];
+  const last = i === QUESTIONS.length - 1;
+  const verdict = ok ? BRAVO[i % BRAVO.length] : OUPS[i % OUPS.length];
+  const parts = [`<li>Connaissance <b>+${fmt(base)}</b></li>`];
+  if (ok) parts.push(`<li>Éclair <b>+${fmt(speed)}</b></li>`);
+  if (serie > 0) parts.push(`<li>Série ×${state.streak} <b>+${fmt(serie)}</b></li>`);
+
+  ui.feedback.innerHTML = `
+    <div class="fb-head">
+      ${CUBE[key] ? `<img class="fb-cube" src="${CUBE[key]}" alt="">` : `<span class="fb-cube fallback" style="background:${BLOCS[key].couleur}"></span>`}
+      <div>
+        <p class="fb-verdict"><span class="badge ${ok ? "ok" : "ko"}" aria-hidden="true">${ok ? "✔" : "✘"}</span>${verdict}</p>
+        <p class="fb-block">${ok ? `Bloc obtenu : ${BLOCS[key].nom}` : "Bloc fissuré… mais tu repars avec une info !"}</p>
+      </div>
+      <div class="fb-points ${gain ? "" : "zero"}">+${fmt(gain)}</div>
+    </div>
+    ${ok ? "" : `<p class="fb-answer">Bonne réponse : ${q.reponses[q.bonne]}</p>`}
+    <p class="fb-explain"><strong>Le savais-tu ?</strong> ${q.explication}</p>
+    <ul class="breakdown" aria-label="Détail des points">${parts.join("")}</ul>
+    <div class="fb-actions"><button class="btn" type="button" id="btn-next">${last ? "Allumer la Balise" : "Question suivante"} <span aria-hidden="true">▶</span></button></div>`;
+  ui.feedback.hidden = false;
+
+  ui.live.textContent = (ok ? "Bonne réponse ! " : "Mauvaise réponse. La bonne réponse était : " + q.reponses[q.bonne] + ". ") +
+    `${fmt(gain)} points. ${q.explication}`;
+
+  const next = $("btn-next");
+  next.addEventListener("click", () => {
+    if (!state.playing) return;
+    Sound.click();
+    next.disabled = true;
+    if (last) endGame(); else showQuestion(i + 1);
+  }, { once: true });
+  next.focus({ preventScroll: true });
+  next.scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" });
+}
+
+/* ----- Fin de partie ----- */
+function endGame() {
+  state.playing = false; state.locked = true;
+  state.token++;
+  cancelAnimationFrame(state.raf);
+  show("end");
+
+  const total = QUESTIONS.length, correct = state.correct;
+  const w = buildWorld($("world-end"));
+  setSky(w, 1);
+  state.answers.forEach((a, i) => setSlot(w, i, a.ok ? QUESTIONS[i].bloc : "fissure", a.ok, false));
+  w.beacon.style.setProperty("--glow", correct / total);
+  w.beam.style.setProperty("--beam-op", (0.3 + 0.7 * correct / total).toFixed(2));
+  if (reduceMotion()) w.beam.classList.add("lit");
+  else setTimeout(() => w.beam.classList.add("lit"), 400);
+
+  const rank = TITRES.find(r => correct >= r.min) || TITRES[TITRES.length - 1];
+  $("end-title").textContent = rank.titre;
+  $("end-power").textContent = `Puissance de la Balise du savoir : ${correct * 10} %`;
+  $("end-msg").textContent = rank.message;
+  $("end-correct").textContent = `${correct}/${total}`;
+  $("end-streak").textContent = state.bestStreak;
+  $("end-blocks").innerHTML = state.answers.map((a, i) => `<li>${cubeHTML(a.ok ? QUESTIONS[i].bloc : "fissure")}</li>`).join("");
+
+  // Récapitulatif
+  $("recap").innerHTML = QUESTIONS.map((q, i) => {
+    const a = state.answers[i];
+    return `<li><details>
+      <summary><span class="badge ${a.ok ? "ok" : "ko"}" aria-hidden="true">${a.ok ? "✔" : "✘"}</span>
+        <span><span class="sr-only">${a.ok ? "Réussie" : "Ratée"} : </span>${i + 1}. ${q.question}</span></summary>
+      <div class="body">
+        <p><span class="lbl">Ta réponse :</span> ${q.reponses[a.orig]}</p>
+        ${a.ok ? "" : `<p><span class="lbl">Bonne réponse :</span> ${q.reponses[q.bonne]}</p>`}
+        <p>${q.explication}</p>
+        <p class="pts">+${fmt(a.gain)} points</p>
+      </div></details></li>`;
+  }).join("");
+
+  // Compteur de score animé
+  const el = $("end-score"), target = state.score;
+  if (reduceMotion() || target === 0) el.textContent = fmt(target);
+  else {
+    const t0 = performance.now(), dur = 1300, tok = state.token;
+    const step = now => {
+      if (tok !== state.token) return;
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    el.textContent = "0";
+    requestAnimationFrame(step);
+  }
+  ui.live.textContent = `Partie terminée. ${rank.titre}. ${correct} bonnes réponses sur ${total}. Score : ${fmt(target)} points.`;
+  Sound.fanfare();
+  $("end-title").focus({ preventScroll: true });
+  if (Online.actif()) {
+    state.payload = {
+      action: "score", id: state.gameId, classe: player.classe, pseudo: player.pseudo,
+      score: state.score, bonnes: correct, n: CLASSEMENT.taille,
+      duree: Math.round((performance.now() - state.gameStart) / 1000)
+    };
+    submitScore();
+  }
+}
+
+/* =========================================================
+   7. CLASSEMENT EN LIGNE
+   ========================================================= */
+const store = {
+  get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
+};
+const player = { pseudo: "", classe: CLASSEMENT.classeParDefaut, classeFixe: false, choix: [] };
+/* Paramètres d'adresse : ceux de la page, ou ceux transmis par Google Apps Script */
+const HOTE = (function () {
+  try {
+    const d = JSON.parse(document.getElementById("md-params").textContent);
+    if (d && typeof d === "object") return { params: new URLSearchParams(d.params || {}), base: String(d.base || "") };
+  } catch (e) { /* page ouverte directement : on lit l'adresse */ }
+  return { params: new URLSearchParams(location.search), base: location.href.split(/[?#]/)[0] };
+})();
+const randInt = n => Math.floor(Math.random() * n);
+const pseudoAleatoire = () => `${PSEUDO_NOMS[randInt(PSEUDO_NOMS.length)]} ${PSEUDO_ADJ[randInt(PSEUDO_ADJ.length)]} ${10 + randInt(90)}`;
+function pseudoValide(p) {
+  const m = typeof p === "string" && p.match(/^(\S+) (\S+) (\d{2})$/);
+  return !!m && PSEUDO_NOMS.includes(m[1]) && PSEUDO_ADJ.includes(m[2]);
+}
+function normClasse(s) {
+  s = String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
+  return s || CLASSEMENT.classeParDefaut;
+}
+const rangTxt = n => (n === 1 ? "1er" : n + "e");
+
+const Online = {
+  actif: () => /^https?:\/\//.test(String(CLASSEMENT.url || "").trim()),
+  async appel(params, body) {
+    const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 15000) : 0;
+    try {
+      let url = CLASSEMENT.url.trim();
+      const opts = { redirect: "follow" };
+      if (ctrl) opts.signal = ctrl.signal;
+      if (body) {
+        opts.method = "POST";
+        opts.headers = { "Content-Type": "text/plain;charset=utf-8" }; // évite la requête préalable CORS
+        opts.body = JSON.stringify(body);
+      } else {
+        url += (url.includes("?") ? "&" : "?") + new URLSearchParams(params).toString();
+      }
+      const r = await fetch(url, opts);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const d = await r.json();
+      if (!d || !d.ok) { const err = new Error((d && d.erreur) || "refus"); err.refus = true; throw err; }
+      return d;
+    } finally { clearTimeout(timer); }
+  }
+};
+
+/* Pseudo + code de classe sur l'écran d'accueil */
+function renderPseudoChoices(keep) {
+  const box = $("pseudo-options");
+  const set = new Set(keep && pseudoValide(keep) ? [keep] : []);
+  while (set.size < 3) set.add(pseudoAleatoire());
+  player.choix = [...set];
+  box.innerHTML = "";
+  player.choix.forEach((ps, i) => {
+    const d = document.createElement("div");
+    d.className = "pseudo-opt";
+    d.innerHTML = `<input type="radio" name="pseudo" id="ps-${i}"><label for="ps-${i}">${cubeHTML(["herbe", "diamant", "redstone"][i])}<span></span></label>`;
+    d.querySelector("span").textContent = ps;
+    const inp = d.querySelector("input");
+    inp.value = ps;
+    inp.checked = i === 0;
+    inp.addEventListener("change", () => { player.pseudo = ps; store.set("md-pseudo", ps); });
+    box.appendChild(d);
+  });
+  player.pseudo = player.choix[0];
+  store.set("md-pseudo", player.pseudo);
+}
+function buildPlayerSetup(params) {
+  if (!Online.actif()) return;
+  renderPseudoChoices(store.get("md-pseudo"));
+  $("btn-reroll").addEventListener("click", () => { Sound.click(); renderPseudoChoices(null); });
+  if (params.get("classe")) {
+    player.classe = normClasse(params.get("classe"));
+    player.classeFixe = true;
+  }
+  $("class-badge").hidden = false;
+  $("class-badge").innerHTML = `Ta classe : <strong></strong>`;
+  $("class-badge").querySelector("strong").textContent = player.classe;
+  $("btn-setup-cancel").addEventListener("click", () => { Sound.click(); closeSetup(); });
+  $("btn-setup-next").addEventListener("click", () => { Sound.click(); showSetupStep(2); });
+  $("btn-setup-back").addEventListener("click", () => { Sound.click(); showSetupStep(1); });
+  $("btn-setup-go").addEventListener("click", () => { Sound.click(); closeSetup(); startGame(); });
+}
+/* Fenêtre pas à pas : 1. pseudo, 2. vérification */
+function showSetupStep(n) {
+  $("setup-step-1").hidden = n !== 1;
+  $("setup-step-2").hidden = n !== 2;
+  if (n === 1) {
+    const sel = document.querySelector("#pseudo-options input:checked");
+    if (sel) sel.focus();
+  } else {
+    $("setup-pseudo").textContent = player.pseudo;
+    $("btn-setup-go").focus();
+  }
+}
+function openSetup() {
+  const dlg = $("dlg-setup");
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+  showSetupStep(1);
+}
+function closeSetup() {
+  const dlg = $("dlg-setup");
+  if (typeof dlg.close === "function") { if (dlg.open) dlg.close(); } else dlg.removeAttribute("open");
+}
+
+/* Liste de classement (fin de partie et TBI) */
+function renderBoard(ol, d, me, prev) {
+  ol.innerHTML = "";
+  const row = (e, isMe) => {
+    const li = document.createElement("li");
+    li.className = "row" + (isMe ? " me" : "");
+    const medal = e.rang <= 3 ? cubeHTML(["diamant", "or", "fer"][e.rang - 1]) : "";
+    li.innerHTML = `<span class="rk">${e.rang}</span><span class="md" aria-hidden="true">${medal}</span><span class="ps"></span>` +
+      `<span class="bn">${e.bonnes}/${QUESTIONS.length}</span><span class="sc">${fmt(e.score)}</span>`;
+    const ps = li.querySelector(".ps");
+    ps.textContent = e.pseudo + (isMe ? " (toi)" : "");
+    if (e.parties > 1) { const sm = document.createElement("small"); sm.textContent = e.parties + " parties"; ps.appendChild(sm); }
+    li.setAttribute("aria-label", `${rangTxt(e.rang)} : ${e.pseudo}, ${fmt(e.score)} points, ${e.bonnes} bonnes réponses`);
+    if (prev && prev[e.pseudo] !== e.score) li.classList.add("fresh");
+    return li;
+  };
+  if (!d.top || !d.top.length) {
+    ol.innerHTML = '<li class="empty">Aucun score pour l’instant. À toi de lancer le classement !</li>';
+    return;
+  }
+  d.top.forEach(e => ol.appendChild(row(e, !!me && e.pseudo === me)));
+  if (me && d.moi && d.moi.rang > d.top.length) {
+    const sep = document.createElement("li"); sep.className = "sep"; sep.textContent = "…"; sep.setAttribute("aria-hidden", "true");
+    ol.appendChild(sep);
+    ol.appendChild(row(d.moi, true));
+  }
+}
+function renderPodium(d, prev) {
+  const box = $("podium");
+  box.innerHTML = "";
+  const top3 = d.top.slice(0, 3);
+  [1, 0, 2].filter(i => top3[i]).forEach(i => {
+    const e = top3[i];
+    const col = document.createElement("div");
+    col.className = "pod pod-" + (i + 1) + (prev && prev[e.pseudo] !== e.score ? " fresh" : "");
+    col.innerHTML = `${cubeHTML(["diamant", "or", "fer"][i])}<span class="pod-name"></span><span class="pod-score">${fmt(e.score)}</span><span class="pod-step" aria-hidden="true">${e.rang}</span>`;
+    col.querySelector(".pod-name").textContent = e.pseudo;
+    col.setAttribute("aria-label", `${rangTxt(e.rang)} : ${e.pseudo}, ${fmt(e.score)} points`);
+    box.appendChild(col);
+  });
+}
+function statsTxt(d) {
+  const j = d.total || 0, p = d.parties || 0;
+  return `${j} aventurier${j > 1 ? "s" : ""} · ${p} partie${p > 1 ? "s" : ""}` + (p ? ` · ${d.tauxBonnes} % de bonnes réponses` : "");
+}
+function setBoardStatus(t) { $("board-status").textContent = t; }
+
+function submitScore() {
+  const tok = state.token;
+  $("board").hidden = false;
+  $("board-title").textContent = `Classement de la classe ${player.classe}`;
+  $("btn-board").disabled = true;
+  setBoardStatus("Envoi de ton score…");
+  Online.appel(null, state.payload).then(d => {
+    if (tok !== state.token) return;
+    state.sent = true;
+    renderBoard($("board-list"), d, player.pseudo);
+    const mieux = d.moi && d.moi.score > state.score;
+    $("board-stats").textContent = statsTxt(d);
+    setBoardStatus(!d.rang ? "Score enregistré !" :
+      d.total === 1 ? `Score enregistré ! Tu es le premier aventurier de la classe ${player.classe} : le classement se remplira au fil des parties.` :
+      mieux ? `Score enregistré ! Ton meilleur score (${fmt(d.moi.score)}) te place ${rangTxt(d.rang)} sur ${d.total}.`
+            : `Score enregistré ! Tu es ${rangTxt(d.rang)} sur ${d.total} aventuriers.`);
+  }).catch(err => {
+    if (tok !== state.token) return;
+    if (err && err.refus) {
+      // Score refusé par le serveur (partie trop rapide, valeur impossible…) : on affiche quand même le classement.
+      state.sent = true;
+      refreshBoard(err.message === "duree" ? "Partie trop rapide : elle n’a pas été comptée." : "Ce score n’a pas pu être validé par le classement.");
+    } else {
+      setBoardStatus("Impossible de joindre le classement pour l’instant. Vérifie ta connexion puis appuie sur « Actualiser ».");
+    }
+  }).finally(() => { if (tok === state.token) $("btn-board").disabled = false; });
+}
+function refreshBoard(prefixe) {
+  prefixe = typeof prefixe === "string" ? prefixe + " " : "";
+  if (!state.sent) { submitScore(); return; }   // l'envoi avait échoué : on réessaie
+  const tok = state.token;
+  $("btn-board").disabled = true;
+  setBoardStatus("Mise à jour…");
+  Online.appel({ action: "top", classe: player.classe, n: CLASSEMENT.taille, pseudo: player.pseudo }).then(d => {
+    if (tok !== state.token) return;
+    renderBoard($("board-list"), d, player.pseudo);
+    $("board-stats").textContent = statsTxt(d);
+    setBoardStatus(prefixe + (d.rang ? `Tu es ${rangTxt(d.rang)} sur ${d.total} aventurier${d.total > 1 ? "s" : ""}.` : "Classement à jour."));
+  }).catch(() => {
+    if (tok === state.token) setBoardStatus(prefixe + "Impossible de joindre le classement pour l’instant.");
+  }).finally(() => { if (tok === state.token) $("btn-board").disabled = false; });
+}
+
+/* Écran « tableau » à projeter : index.html?tableau&classe=S1A */
+function startBoardMode() {
+  show("board");
+  document.title = "Classement en direct — Minecraft Discovery";
+  const w = buildWorld($("world-board"));
+  setSky(w, 1);
+  QUESTIONS.forEach((q, i) => setSlot(w, i, q.bloc, true, false));
+  w.beacon.style.setProperty("--glow", 1);
+  w.beam.classList.add("lit");
+  $("live-class").textContent = player.classe;
+  const lien = HOTE.base + "?classe=" + encodeURIComponent(player.classe);
+  if (/^https?:/.test(lien)) $("live-join").textContent = "Pour jouer : " + lien;
+  if (!Online.actif()) {
+    $("live-list").innerHTML = '<li class="empty">Classement non configuré : colle l’URL de ton script dans CLASSEMENT.url (index.html).</li>';
+    return;
+  }
+  let prev = null;
+  const refresh = () => {
+    Online.appel({ action: "top", classe: player.classe, n: CLASSEMENT.tailleTableau }).then(d => {
+      renderPodium(d, prev);
+      if (d.top.length > 3) renderBoard($("live-list"), { top: d.top.slice(3) }, null, prev);
+      else $("live-list").innerHTML = d.top.length ? "" : '<li class="empty">En attente des premiers aventuriers… Scanne le QR code pour jouer !</li>';
+      prev = {}; d.top.forEach(e => { prev[e.pseudo] = e.score; });
+      $("live-count").textContent = statsTxt(d);
+      $("live-updated").textContent = "Mis à jour à " + new Date().toLocaleTimeString("fr-BE");
+    }).catch(() => {
+      $("live-updated").textContent = "Connexion au classement impossible, nouvel essai dans quelques secondes…";
+    }).finally(() => setTimeout(refresh, Math.max(3, CLASSEMENT.rafraichissement) * 1000));
+  };
+  refresh();
+}
+
+/* ----- Son ----- */
+function setSound(on) {
+  Sound.on = on;
+  document.querySelectorAll(".sound-btn").forEach(b => {
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    if (!b.querySelector(".sound-text")) b.setAttribute("aria-label", on ? "Effets sonores : activés" : "Effets sonores : coupés");
+    const t = b.querySelector(".sound-text"); if (t) t.textContent = on ? "Son activé" : "Son coupé";
+  });
+  if (on) { Sound.ensure(); Sound.click(); }
+}
+
+/* ----- Accueil ----- */
+function buildStart() {
+  const w = buildWorld($("world-start"));
+  setSky(w, .12);
+  w.slots.forEach((s, i) => { if (i < 4) setSlot(w, i, "pierre", true, false); });
+  $("start-cubes").innerHTML = cubeHTML("herbe") + cubeHTML("diamant") + cubeHTML("redstone");
+  const rules = [
+    ["pierre", "<strong>10 questions</strong>, 4 réponses : choisis la bonne."],
+    ["or", "<strong>Bonne réponse</strong> : un bloc brillant et 500 à 1 000 points."],
+    ["fissure", "<strong>Erreur</strong> : un bloc fissuré… et une explication pour apprendre."],
+    ["redstone", "<strong>Bonus éclair</strong> : la torche reste pleine 6 secondes, le temps de lire. Réponds vite pour gagner plus !"]
+  ];
+  $("rules").innerHTML = rules.map(r => `<li>${cubeHTML(r[0])}<span>${r[1]}</span></li>`).join("");
+}
+
+/* ----- Initialisation ----- */
+function init() {
+  try { buildTextures(); } catch (e) { /* le jeu reste jouable avec les couleurs de secours */ }
+  const params = HOTE.params;
+  if (params.get("classe")) player.classe = normClasse(params.get("classe"));
+  if (params.has("tableau")) { startBoardMode(); return; }
+  buildAnswerButtons();
+  buildStart();
+  buildPlayerSetup(params);
+  $("btn-board").addEventListener("click", () => refreshBoard());
+
+  $("btn-start").addEventListener("click", () => { Sound.click(); if (Online.actif()) openSetup(); else startGame(); });
+  $("btn-replay").addEventListener("click", startGame);
+  $("btn-replay-2").addEventListener("click", startGame);
+  $("btn-restart").addEventListener("click", () => {
+    if (window.confirm("Recommencer la partie depuis le début ?")) startGame();
+  });
+  document.querySelectorAll(".sound-btn").forEach(b => b.addEventListener("click", () => setSound(!Sound.on)));
+  setSound(false);
+
+  // Clavier : 1-4 ou A-D pour répondre
+  document.addEventListener("keydown", e => {
+    if (screens.game.hidden || state.locked || e.ctrlKey || e.metaKey || e.altKey) return;
+    const map = { "1": 0, "2": 1, "3": 2, "4": 3, "a": 0, "b": 1, "c": 2, "d": 3 };
+    const k = map[e.key.toLowerCase()];
+    if (k !== undefined) { e.preventDefault(); choose(k); }
+  });
+}
+init();
+
+// Petite API de test (utile pour vérifier le jeu, sans effet sur la partie)
+window.__MD = { state, QUESTIONS, SCORE, speedFactor, CLASSEMENT, player };
+})();
+</script>
+</body>
+</html>
