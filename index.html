@@ -543,6 +543,13 @@ button { font: inherit; }
 .setup-title2 { margin: 0 0 12px; font-size: 1.3rem; }
 .setup-recap { margin: 0; font-size: 1.1rem; font-weight: 800; }
 .setup-recap strong { background: var(--gold); color: #2a1d00; padding: 2px 8px; border: 2px solid #000; }
+.pseudo-libre { display: grid; gap: 6px; margin-top: 8px; }
+.pseudo-libre .crayon { width: 30px; font-size: 1.3rem; text-align: center; }
+.pseudo-opt input.pseudo-texte {
+  position: static; opacity: 1; width: 100%; height: auto; min-height: 48px; padding: 10px 12px;
+  font: inherit; font-size: 1.05rem; font-weight: 800; color: #1d1d1f; background: #f4f4f4; border: 3px solid #000;
+}
+.setup-error { margin: 10px 0 0; padding: 8px 10px; background: #5a1d16; border: 2px solid #ff8a7a; font-weight: 800; }
 .setup-nav { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 
 .board { margin-top: 26px; background: #000; border: 3px solid #4a4a52; padding: 14px; }
@@ -707,7 +714,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
       <a class="credits-logo" href="https://www.esciences.be" target="_blank" rel="noopener" aria-label="Site eSCIENCES (nouvel onglet)"><span class="logo-esciences" aria-hidden="true"></span></a>
       <p class="credits-names">Une création de <strong>Tommy Berben</strong></p>
     </footer>
-    <p class="disclaimer">Jeu pédagogique non officiel, non affilié à Mojang Studios ni à Microsoft. Aucun compte, aucune donnée personnelle : seuls le pseudo tiré au sort et le score sont enregistrés.</p>
+    <p class="disclaimer">Jeu pédagogique non officiel, non affilié à Mojang Studios ni à Microsoft. Aucun compte, aucune donnée personnelle : seuls le pseudo et le score sont enregistrés.</p>
   </div>
 </section>
 
@@ -718,9 +725,15 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
     <fieldset>
       <legend>Choisis ton pseudo d’aventurier</legend>
       <div class="pseudo-options" id="pseudo-options"></div>
+      <div class="pseudo-opt pseudo-libre">
+        <input type="radio" name="pseudo" id="ps-libre" value="">
+        <label for="ps-libre"><span class="crayon" aria-hidden="true">✏️</span><span>J’écris mon pseudo</span></label>
+        <input class="pseudo-texte" id="pseudo-libre" type="text" maxlength="20" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="ex. Creeper du Nord" aria-label="Mon pseudo (3 à 20 caractères)">
+      </div>
     </fieldset>
+    <p class="setup-error" id="setup-error" role="alert" hidden></p>
     <div class="setup-row"><button class="btn stone small" type="button" id="btn-reroll">Autres pseudos</button></div>
-    <p class="setup-hint">Pas de vrai nom ici : ton pseudo est tiré au sort et c’est lui qui apparaîtra dans le classement.</p>
+    <p class="setup-hint">Pas de vrai nom ici : ton pseudo apparaîtra dans le classement.</p>
     <div class="setup-nav">
       <button class="btn stone small" type="button" id="btn-setup-cancel">Retour</button>
       <button class="btn small" type="button" id="btn-setup-next">Suivant</button>
@@ -1665,6 +1678,22 @@ function pseudoValide(p) {
   const m = typeof p === "string" && p.match(/^(\S+) (\S+) (\d{2})$/);
   return !!m && PSEUDO_NOMS.includes(m[1]) && PSEUDO_ADJ.includes(m[2]);
 }
+/* Pseudo écrit par l'élève : 3 à 20 caractères, lettres, chiffres, espaces, tirets, sans gros mots */
+const MOTS_INTERDITS = ["con", "cons", "conne", "pd", "fdp", "ntm", "tg", "bite", "cul", "pute", "putes", "nazi", "nazis",
+  "sexe", "sexy", "porn", "porno", "merde", "chier"];
+const RACINES_INTERDITES = ["connard", "connass", "salop", "encul", "putain", "batard", "couill", "nique", "enfoir",
+  "petass", "pouffiass", "branl", "foutre", "bordel", "hitler", "pedo", "negr", "bougnoul"];
+function motInterdit(p) {
+  const t = p.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return t.split(/[^a-z0-9]+/).some(m => MOTS_INTERDITS.includes(m)) || RACINES_INTERDITES.some(r => t.includes(r));
+}
+function pseudoLibre(s) {
+  const p = String(s || "").replace(/\s+/g, " ").trim();
+  if (p.length < 3) return { ok: false, msg: "Ton pseudo doit avoir au moins 3 caractères." };
+  if (p.length > 20 || !/^[\p{L}\p{N}][\p{L}\p{N} _-]*$/u.test(p)) return { ok: false, msg: "Utilise seulement des lettres, des chiffres, des espaces ou des tirets." };
+  if (motInterdit(p)) return { ok: false, msg: "Ce pseudo n’est pas accepté. Choisis un pseudo gentil." };
+  return { ok: true, p };
+}
 function normClasse(s) {
   s = String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 20);
   return s || CLASSEMENT.classeParDefaut;
@@ -1711,7 +1740,7 @@ function renderPseudoChoices(keep) {
     const inp = d.querySelector("input");
     inp.value = ps;
     inp.checked = i === 0;
-    inp.addEventListener("change", () => { player.pseudo = ps; store.set("md-pseudo", ps); });
+    inp.addEventListener("change", () => { player.pseudo = ps; store.set("md-pseudo", ps); setupErreur(""); });
     box.appendChild(d);
   });
   player.pseudo = player.choix[0];
@@ -1719,8 +1748,12 @@ function renderPseudoChoices(keep) {
 }
 function buildPlayerSetup(params) {
   if (!Online.actif()) return;
-  renderPseudoChoices(store.get("md-pseudo"));
-  $("btn-reroll").addEventListener("click", () => { Sound.click(); renderPseudoChoices(null); });
+  const saved = store.get("md-pseudo");
+  renderPseudoChoices(saved);
+  if (saved && !pseudoValide(saved) && pseudoLibre(saved).ok) { $("pseudo-libre").value = saved; choisirLibre(); }
+  $("btn-reroll").addEventListener("click", () => { Sound.click(); setupErreur(""); renderPseudoChoices(null); });
+  $("pseudo-libre").addEventListener("input", choisirLibre);
+  $("ps-libre").addEventListener("change", () => { choisirLibre(); $("pseudo-libre").focus(); });
   if (params.get("classe")) {
     player.classe = normClasse(params.get("classe"));
     player.classeFixe = true;
@@ -1729,9 +1762,27 @@ function buildPlayerSetup(params) {
   $("class-badge").innerHTML = `Ta classe : <strong></strong>`;
   $("class-badge").querySelector("strong").textContent = player.classe;
   $("btn-setup-cancel").addEventListener("click", () => { Sound.click(); closeSetup(); });
-  $("btn-setup-next").addEventListener("click", () => { Sound.click(); showSetupStep(2); });
+  $("btn-setup-next").addEventListener("click", () => {
+    Sound.click();
+    if ($("ps-libre").checked) {
+      const r = pseudoLibre($("pseudo-libre").value);
+      if (!r.ok) { setupErreur(r.msg); $("pseudo-libre").focus(); return; }
+      player.pseudo = r.p;
+      store.set("md-pseudo", r.p);
+    }
+    showSetupStep(2);
+  });
   $("btn-setup-back").addEventListener("click", () => { Sound.click(); showSetupStep(1); });
   $("btn-setup-go").addEventListener("click", () => { Sound.click(); closeSetup(); startGame(); });
+}
+function choisirLibre() {
+  $("ps-libre").checked = true;
+  player.pseudo = $("pseudo-libre").value.replace(/\s+/g, " ").trim();
+  setupErreur("");
+}
+function setupErreur(t) {
+  $("setup-error").textContent = t;
+  $("setup-error").hidden = !t;
 }
 /* Fenêtre pas à pas : 1. pseudo, 2. vérification */
 function showSetupStep(n) {

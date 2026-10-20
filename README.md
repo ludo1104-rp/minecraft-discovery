@@ -6,4 +6,4 @@ Mini-jeu pédagogique : 10 questions de culture générale sur Minecraft pour ra
 - Classement en direct (TBI) : https://ludo1104-rp.github.io/minecraft-discovery/?tableau&classe=LUDOVIA
 
 Une création de Tommy Berben. Jeu non officiel, non affilié à Mojang Studios ni à Microsoft.
-Aucun compte, aucune donnée personnelle : seuls le pseudo tiré au sort et le score sont enregistrés.
+Aucun compte, aucune donnée personnelle : seuls le pseudo et le score sont enregistrés.
