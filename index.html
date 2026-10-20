@@ -562,6 +562,9 @@ button { font: inherit; }
   font: inherit; font-size: 1.05rem; font-weight: 800; color: #1d1d1f; background: #f4f4f4; border: 3px solid #000;
 }
 .setup-error { margin: 10px 0 0; padding: 8px 10px; background: #5a1d16; border: 2px solid #ff8a7a; font-weight: 800; }
+.trophy-btn { min-height: 56px; }
+.cl-stats { margin: 0 0 10px; color: #c9c9c9; font-size: .9rem; }
+#cl-moi { margin: 0 0 12px; font-size: 1rem; }
 .setup-nav { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 
 .board { margin-top: 26px; background: #000; border: 3px solid #4a4a52; padding: 14px; }
@@ -716,6 +719,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
     <ul class="rules" id="rules"></ul>
     <div class="start-actions">
       <button class="btn big" id="btn-start" type="button">Commencer l’aventure</button>
+      <button class="btn stone trophy-btn" id="btn-classement" type="button" hidden>🏆 Voir le classement</button>
       <button class="icon-btn sound-btn" type="button" aria-pressed="false">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="waves" d="M15 8.5a5 5 0 0 1 0 7M17.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2.2" fill="none"/><path class="mute" d="M15 9l6 6M21 9l-6 6" stroke="currentColor" stroke-width="2.2"/></svg>
         <span class="sound-text">Son coupé</span>
@@ -760,6 +764,22 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
     <div class="setup-nav">
       <button class="btn stone small" type="button" id="btn-setup-back">Changer de pseudo</button>
       <button class="btn small" type="button" id="btn-setup-go">C’est parti !</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- ======================= CLASSEMENT (fenêtre de l'accueil) ======================= -->
+<dialog class="setup-dialog" id="dlg-classement" aria-labelledby="cl-title">
+  <div class="player-setup">
+    <p class="setup-step">🏆 Classement</p>
+    <h2 class="setup-title2" id="cl-title">Classe <span id="cl-classe"></span></h2>
+    <p class="cl-stats" id="cl-stats"></p>
+    <p class="setup-recap" id="cl-moi" hidden></p>
+    <p class="board-status" id="cl-status" role="status"></p>
+    <ol class="board-list" id="cl-list"></ol>
+    <div class="setup-nav">
+      <button class="btn stone small" type="button" id="btn-cl-refresh">Actualiser</button>
+      <button class="btn small" type="button" id="btn-cl-close">Fermer</button>
     </div>
   </div>
 </dialog>
@@ -1828,6 +1848,36 @@ function closeSetup() {
   if (typeof dlg.close === "function") { if (dlg.open) dlg.close(); } else dlg.removeAttribute("open");
 }
 
+/* Classement consultable depuis l'accueil */
+function openClassement() {
+  const dlg = $("dlg-classement");
+  $("cl-classe").textContent = player.classe;
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+  loadClassement();
+  $("btn-cl-close").focus();
+}
+function loadClassement() {
+  const moi = store.get("md-pseudo") || "";
+  $("btn-cl-refresh").disabled = true;
+  $("cl-status").textContent = "Chargement du classement…";
+  Online.appel({ action: "top", classe: player.classe, n: CLASSEMENT.taille, pseudo: moi }).then(d => {
+    renderBoard($("cl-list"), d, moi);
+    $("cl-stats").textContent = statsTxt(d);
+    $("cl-status").textContent = "";
+    $("cl-moi").hidden = !d.moi;
+    if (d.moi) {
+      $("cl-moi").innerHTML = `Ton meilleur score : <strong></strong>`;
+      $("cl-moi").querySelector("strong").textContent = `${fmt(d.moi.score)} points (${rangTxt(d.moi.rang)})`;
+    }
+  }).catch(() => {
+    $("cl-status").textContent = "Impossible de joindre le classement pour l’instant. Vérifie ta connexion puis appuie sur « Actualiser ».";
+  }).finally(() => { $("btn-cl-refresh").disabled = false; });
+}
+function closeClassement() {
+  const dlg = $("dlg-classement");
+  if (typeof dlg.close === "function") { if (dlg.open) dlg.close(); } else dlg.removeAttribute("open");
+}
+
 /* Liste de classement (fin de partie et TBI) */
 function renderBoard(ol, d, me, prev) {
   ol.innerHTML = "";
@@ -1987,6 +2037,12 @@ function init() {
   buildStart();
   buildPlayerSetup(params);
   $("btn-board").addEventListener("click", () => refreshBoard());
+  if (Online.actif()) {
+    $("btn-classement").hidden = false;
+    $("btn-classement").addEventListener("click", () => { Sound.click(); openClassement(); });
+    $("btn-cl-refresh").addEventListener("click", () => { Sound.click(); loadClassement(); });
+    $("btn-cl-close").addEventListener("click", () => { Sound.click(); closeClassement(); });
+  }
 
   $("btn-start").addEventListener("click", () => { Sound.click(); if (Online.actif()) openSetup(); else startGame(); });
   $("btn-replay").addEventListener("click", startGame);
