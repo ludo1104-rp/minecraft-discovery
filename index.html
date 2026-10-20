@@ -383,7 +383,8 @@ button { font: inherit; }
   background: #727272; color: #fff; text-shadow: 2px 2px 0 #3a3a3a;
   box-shadow: inset 3px 3px 0 #a9a9a9, inset -3px -3px 0 #4b4b4b;
 }
-.ans .shape { font-family: var(--font-pixel); font-weight: 900; text-shadow: none; color: #fff; }
+.ans .shape img, .ans .shape .fallback { width: 34px; height: 34px; display: block; }
+.ans .mark { text-shadow: none; }
 .ans .mark {
   position: absolute; top: -14px; right: 10px; z-index: 1;
   font-size: .8rem; font-weight: 900; padding: 2px 8px;
@@ -640,7 +641,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
 .ans { border-width: 3px; font-weight: 700; min-height: 60px; }
 .ans .shape { width: 30px; height: 30px; border: 0; background: rgba(0,0,0,.2); font-size: .95rem; }
 .a-wood, .a-lapis, .a-gold, .a-ame { background: #6f6f6f; color: #fff; }
-.ans .shape { background: #8b8b8b; border: 2px solid; border-color: #373737 #fff #fff #373737; color: #2b2b2b; }
+.ans .shape { width: 36px; height: 36px; background: none; border: 0; }
 .ans:hover:not(:disabled) { outline: 3px solid #fff; outline-offset: -3px; filter: none; }
 .kbd-hint, .ans .key { display: none !important; }
 .feedback { border-width: 3px; }
@@ -1015,7 +1016,7 @@ const BLOCS = {
 const NIVEAUX = { facile: "Facile", moyen: "Intermédiaire", defi: "Défi" };
 const BRAVO = ["Bien joué !", "Excellent !", "Bloc récolté !", "Tu gères !", "Parfait !", "En plein dans le mille !"];
 const OUPS = ["Pas cette fois…", "Presque !", "Raté, mais tu progresses", "Oups ! On apprend en minant"];
-const SHAPES = ["A", "B", "C", "D"];
+const SHAPES = ["herbe", "diamant", "or", "redstone"];
 const ANS_CLASS = ["a-wood", "a-lapis", "a-gold", "a-ame"];
 const PYR_POS = [[0,0],[1,0],[2,0],[3,0],[0.5,1],[1.5,1],[2.5,1],[1,2],[2,2],[1.5,3]];
 
@@ -1397,7 +1398,7 @@ function buildAnswerButtons() {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "ans " + ANS_CLASS[k];
-    b.innerHTML = `<span class="shape" aria-hidden="true">${sh}</span><span class="ans-text"></span><span class="mark" hidden></span><span class="key" aria-hidden="true">${k + 1}</span>`;
+    b.innerHTML = `<span class="shape" aria-hidden="true">${cubeHTML(sh)}</span><span class="ans-text"></span><span class="mark" hidden></span><span class="key" aria-hidden="true">${k + 1}</span>`;
     b.addEventListener("click", () => choose(k));
     ui.answers.appendChild(b);
     return b;
