@@ -272,7 +272,7 @@ button { font: inherit; }
 /* ---------- Écran de jeu ---------- */
 #screen-game {
   min-height: 100vh; min-height: 100dvh;
-  display: grid; grid-template-rows: auto 1fr auto;
+  display: grid; grid-template-rows: auto 1fr auto; grid-template-columns: minmax(0, 1fr);
 }
 .hud {
   position: sticky; top: 0; z-index: 10;
@@ -319,6 +319,14 @@ button { font: inherit; }
   padding: 16px;
 }
 .card.enter { animation: enter .35s ease-out; }
+.read-btn { display: none; width: 100%; margin-top: 6px; }
+.card.lecture .read-btn { display: flex; }
+.card.lecture .torch, .card.lecture .answers, .card.lecture .kbd-hint { display: none; }
+.answers.reveal .ans { animation: ans-in .35s ease-out backwards; }
+.answers.reveal .ans:nth-child(2) { animation-delay: .1s; }
+.answers.reveal .ans:nth-child(3) { animation-delay: .2s; }
+.answers.reveal .ans:nth-child(4) { animation-delay: .3s; }
+@keyframes ans-in { from { transform: translateY(16px); opacity: 0; } }
 @keyframes enter { from { transform: translateY(10px); opacity: 0; } }
 .card.shake { animation: shake .4s; }
 @keyframes shake { 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
@@ -371,10 +379,11 @@ button { font: inherit; }
 .ans .key {
   display: none; position: absolute; top: 3px; right: 6px; font-size: .72rem; font-weight: 900; opacity: .75;
 }
-.a-wood { background: #86562a; }
-.a-lapis { background: #2f55a4; }
-.a-gold { background: #f0c235; color: #2a1d00; }
-.a-ame { background: #74479f; }
+.a-wood, .a-lapis, .a-gold, .a-ame {
+  background: #727272; color: #fff; text-shadow: 2px 2px 0 #3a3a3a;
+  box-shadow: inset 3px 3px 0 #a9a9a9, inset -3px -3px 0 #4b4b4b;
+}
+.ans .shape { font-family: var(--font-pixel); font-weight: 900; text-shadow: none; color: #fff; }
 .ans .mark {
   position: absolute; top: -14px; right: 10px; z-index: 1;
   font-size: .8rem; font-weight: 900; padding: 2px 8px;
@@ -543,7 +552,9 @@ button { font: inherit; }
 .setup-title2 { margin: 0 0 12px; font-size: 1.3rem; }
 .setup-recap { margin: 0; font-size: 1.1rem; font-weight: 800; }
 .setup-recap strong { background: var(--gold); color: #2a1d00; padding: 2px 8px; border: 2px solid #000; }
-.pseudo-libre { display: grid; gap: 6px; margin-top: 8px; }
+.pseudo-libre { display: grid; gap: 6px; }
+.pseudo-ou { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; color: #c9c9c9; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; font-size: .85rem; }
+.pseudo-ou::before, .pseudo-ou::after { content: ""; flex: 1; border-top: 2px dashed rgba(255,255,255,.3); }
 .pseudo-libre .crayon { width: 30px; font-size: 1.3rem; text-align: center; }
 .pseudo-opt input.pseudo-texte {
   position: static; opacity: 1; width: 100%; height: auto; min-height: 48px; padding: 10px 12px;
@@ -628,10 +639,9 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
 .torch-bar { height: 10px; border-width: 2px; }
 .ans { border-width: 3px; font-weight: 700; min-height: 60px; }
 .ans .shape { width: 30px; height: 30px; border: 0; background: rgba(0,0,0,.2); font-size: .95rem; }
-.a-wood { background: #6f4d2d; }
-.a-lapis { background: #34538c; }
-.a-gold { background: #c7a23c; color: #231900; }
-.a-ame { background: #634a86; }
+.a-wood, .a-lapis, .a-gold, .a-ame { background: #6f6f6f; color: #fff; }
+.ans .shape { background: #8b8b8b; border: 2px solid; border-color: #373737 #fff #fff #373737; color: #2b2b2b; }
+.ans:hover:not(:disabled) { outline: 3px solid #fff; outline-offset: -3px; filter: none; }
 .kbd-hint, .ans .key { display: none !important; }
 .feedback { border-width: 3px; }
 .fb-verdict { font-size: 1.15rem; }
@@ -725,6 +735,8 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
     <fieldset>
       <legend>Choisis ton pseudo d’aventurier</legend>
       <div class="pseudo-options" id="pseudo-options"></div>
+      <div class="setup-row"><button class="btn stone small" type="button" id="btn-reroll">Autres pseudos</button></div>
+      <p class="pseudo-ou" aria-hidden="true"><span>ou</span></p>
       <div class="pseudo-opt pseudo-libre">
         <input type="radio" name="pseudo" id="ps-libre" value="">
         <label for="ps-libre"><span class="crayon" aria-hidden="true">✏️</span><span>J’écris mon pseudo</span></label>
@@ -732,7 +744,6 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
       </div>
     </fieldset>
     <p class="setup-error" id="setup-error" role="alert" hidden></p>
-    <div class="setup-row"><button class="btn stone small" type="button" id="btn-reroll">Autres pseudos</button></div>
     <p class="setup-hint">Pas de vrai nom ici : ton pseudo apparaîtra dans le classement.</p>
     <div class="setup-nav">
       <button class="btn stone small" type="button" id="btn-setup-cancel">Retour</button>
@@ -778,6 +789,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
           <span class="chip reward" id="chip-reward"></span>
         </div>
         <h2 class="question" id="question" tabindex="-1"></h2>
+        <button class="btn read-btn" type="button" id="btn-lu">J’ai lu la question ✓</button>
         <div class="torch" id="torch" aria-hidden="true">
           <span class="torch-icon"></span>
           <span class="torch-label" id="torch-label">Bonus éclair</span>
@@ -951,8 +963,8 @@ const QUESTIONS = [
    2. RÉGLAGES DU SCORE
    ========================================================= */
 const SCORE = {
-  delaiLecture: 6,        // secondes pendant lesquelles le bonus éclair reste maximal
-  dureeBonus: 20,         // secondes pour que le bonus éclair descende ensuite à 0
+  delaiLecture: 1,        // secondes pendant lesquelles le bonus éclair reste maximal
+  dureeBonus: 15,         // secondes pour que le bonus éclair descende ensuite à 0
   partBonusEclair: 0.30,  // bonus éclair max = 30 % des points de la question
   bonusSerie: 50,         // +50 par bonne réponse enchaînée…
   bonusSerieMax: 150      // …plafonné à +150
@@ -1003,7 +1015,7 @@ const BLOCS = {
 const NIVEAUX = { facile: "Facile", moyen: "Intermédiaire", defi: "Défi" };
 const BRAVO = ["Bien joué !", "Excellent !", "Bloc récolté !", "Tu gères !", "Parfait !", "En plein dans le mille !"];
 const OUPS = ["Pas cette fois…", "Presque !", "Raté, mais tu progresses", "Oups ! On apprend en minant"];
-const SHAPES = ["◆", "●", "▲", "■"];
+const SHAPES = ["A", "B", "C", "D"];
 const ANS_CLASS = ["a-wood", "a-lapis", "a-gold", "a-ame"];
 const PYR_POS = [[0,0],[1,0],[2,0],[3,0],[0.5,1],[1.5,1],[2.5,1],[1,2],[2,2],[1.5,3]];
 
@@ -1471,7 +1483,16 @@ function showQuestion(i) {
   window.scrollTo({ top: 0, behavior: "auto" });
   ui.question.focus({ preventScroll: true });
 
-  // Petit délai : évite qu'un double tap sur « Suivant » réponde par accident
+  // Lecture : la question seule, puis « J'ai lu la question » affiche les réponses
+  ui.card.classList.add("lecture");
+  ui.answers.classList.remove("reveal");
+}
+function revealAnswers() {
+  if (!state.playing || !ui.card.classList.contains("lecture")) return;
+  const token = state.token;
+  ui.card.classList.remove("lecture");
+  void ui.answers.offsetWidth; ui.answers.classList.add("reveal");
+  // Petit délai : évite qu'un double tap réponde par accident ; la torche démarre ensuite
   setTimeout(() => {
     if (token !== state.token || !state.playing) return;
     state.locked = false;
@@ -1949,7 +1970,7 @@ function buildStart() {
     ["pierre", "<strong>10 questions</strong>, 4 réponses : choisis la bonne."],
     ["or", "<strong>Bonne réponse</strong> : un bloc brillant et 500 à 1 000 points."],
     ["fissure", "<strong>Erreur</strong> : un bloc fissuré… et une explication pour apprendre."],
-    ["redstone", "<strong>Bonus éclair</strong> : la torche reste pleine 6 secondes, le temps de lire. Réponds vite pour gagner plus !"]
+    ["redstone", "<strong>Bonus éclair</strong> : lis la question puis touche « J’ai lu la question ». La torche démarre : réponds vite pour gagner plus !"]
   ];
   $("rules").innerHTML = rules.map(r => `<li>${cubeHTML(r[0])}<span>${r[1]}</span></li>`).join("");
 }
@@ -1961,6 +1982,7 @@ function init() {
   if (params.get("classe")) player.classe = normClasse(params.get("classe"));
   if (params.has("tableau")) { startBoardMode(); return; }
   buildAnswerButtons();
+  $("btn-lu").addEventListener("click", () => { Sound.click(); revealAnswers(); });
   buildStart();
   buildPlayerSetup(params);
   $("btn-board").addEventListener("click", () => refreshBoard());
