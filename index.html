@@ -567,6 +567,19 @@ button { font: inherit; }
   padding: 10px 12px; border: 3px solid #000; background: #f4f4f4; color: #1d1d1f; min-height: 50px; width: 100%; max-width: 13em;
 }
 .class-badge { margin: 12px 0 0; font-weight: 800; }
+/* Événement (Ludovia, StarTechs Days…) : bandeau sous le sous-titre */
+.event-badge { display: table; margin: 10px auto 0; padding: 4px 12px; background: var(--gold); color: #2a1d00; border: 3px solid #000; font-weight: 900; letter-spacing: .04em; }
+/* Étape suivante : découvrir Minecraft Education */
+#screen-next { min-height: 100vh; min-height: 100dvh; padding: 0 0 40px; }
+#screen-next .world { height: clamp(220px, 36vh, 320px); --t: 34px; border-left: 0; border-right: 0; border-top: 0; }
+.next-lead { text-align: center; font-size: 1.15rem; line-height: 1.5; max-width: 32em; margin: 12px auto 18px; }
+.next-steps { list-style: none; counter-reset: st; padding: 0; margin: 0 auto 18px; max-width: 34em; display: grid; gap: 10px; }
+.next-steps li { counter-increment: st; display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,.28); border: 3px solid #000; padding: 10px 14px; font-size: 1.08rem; line-height: 1.4; }
+.next-steps li::before { content: counter(st); flex: none; width: 38px; height: 38px; display: grid; place-items: center; background: #5aa02c; color: #fff; border: 3px solid #000; font-weight: 900; font-size: 1.2rem; }
+.next-world { max-width: 34em; margin: 0 auto 18px; padding: 14px 16px; background: #24452a; border: 3px solid #000; box-shadow: var(--bevel); }
+.next-world h3 { margin: 0 0 6px; color: var(--gold); font-family: var(--font-pixel); font-size: 1.35rem; text-shadow: 2px 2px 0 #000; }
+.next-world p { margin: 4px 0; line-height: 1.45; }
+a.btn { text-decoration: none; }
 .class-badge strong { background: var(--gold); color: #2a1d00; padding: 2px 8px; border: 2px solid #000; }
 .setup-hint { font-size: .85rem; color: #c9c9c9; margin: 10px 0 0; font-weight: 400; }
 .setup-dialog {
@@ -753,6 +766,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
     <div class="cube-row" aria-hidden="true" id="start-cubes"></div>
     <h1 class="title" id="game-title"><span class="l1">Minecraft</span><span class="l2">Discovery</span></h1>
     <p class="subtitle">Le défi des 10 blocs</p>
+    <p class="event-badge" id="event-badge" hidden></p>
     <p class="story">Tu arrives dans un monde inconnu. Au sommet de la colline, la <strong>Balise du savoir</strong> s’est éteinte. Pour la rallumer, il te faut <strong>10 blocs de connaissance</strong>. Chaque question t’en rapporte un.</p>
     <ul class="rules" id="rules"></ul>
     <div class="start-actions">
@@ -880,7 +894,7 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
       <div class="stat"><span>Meilleure série</span><strong id="end-streak">0</strong></div>
     </div>
     <p class="end-msg" id="end-msg"></p>
-    <div class="end-actions"><button class="btn big" type="button" id="btn-replay">Rejouer l’aventure</button></div>
+    <div class="end-actions"><button class="btn big" type="button" id="btn-next" hidden>Étape suivante ▶</button><button class="btn big" type="button" id="btn-replay">Rejouer l’aventure</button></div>
     <section class="board" id="board" hidden aria-labelledby="board-title">
       <h3 id="board-title">Classement</h3>
       <p class="board-status" id="board-status" aria-live="polite"></p>
@@ -898,11 +912,38 @@ body { background-image: linear-gradient(rgba(14,9,5,.8), rgba(14,9,5,.8)), var(
   </div>
 </section>
 
+<!-- ======================= ÉTAPE SUIVANTE (selon l'événement) ======================= -->
+<section id="screen-next" hidden aria-labelledby="next-title">
+  <div class="world" id="world-next" aria-hidden="true"></div>
+  <div class="result">
+    <p class="eyebrow" id="next-eyebrow">Étape 2</p>
+    <h2 class="end-title" id="next-title" tabindex="-1">À toi de jouer dans Minecraft !</h2>
+    <p class="next-lead">Tu connais bien Minecraft. Maintenant, joue avec les mots dans <strong>Minecraft Education</strong>.</p>
+    <ol class="next-steps">
+      <li><span>Ouvre l’application <strong>Minecraft Education</strong> sur l’iPad.</span></li>
+      <li><span>Touche <strong>Jouer</strong>, puis <strong>Voir mes mondes</strong>.</span></li>
+      <li><span>Ouvre le monde <strong>Le pont des synonymes</strong>.</span></li>
+    </ol>
+    <div class="next-world">
+      <h3>Le pont des synonymes</h3>
+      <p>Un mot est écrit devant toi.</p>
+      <p>Trois dalles t’attendent. Une seule a un <strong>synonyme</strong> : un mot qui veut dire la même chose.</p>
+      <p>Bonne dalle : un pont se construit. Mauvaise dalle : elle s’effondre… et tu recommences l’étape !</p>
+      <p>Trois niveaux : débutant, intermédiaire, difficile. Jusqu’où iras-tu ?</p>
+    </div>
+    <p class="next-lead" style="margin-bottom:10px">Demande de l’aide à l’adulte du stand si tu ne trouves pas le monde.</p>
+    <div class="end-actions">
+      <a class="btn big" id="btn-next-home" href="#" hidden>Retour à l’accueil</a>
+      <button class="btn stone" type="button" id="btn-next-back">Revoir mon score</button>
+    </div>
+  </div>
+</section>
+
 <!-- ======================= TABLEAU (TBI) ======================= -->
 <section id="screen-board" hidden aria-labelledby="live-title">
   <div class="world" id="world-board" aria-hidden="true"></div>
   <div class="live-panel">
-    <p class="eyebrow">Minecraft Discovery</p>
+    <p class="eyebrow" id="live-eyebrow">Minecraft Discovery</p>
     <h1 class="end-title" id="live-title">Classement en direct</h1>
     <p class="live-class">Classe <strong id="live-class"></strong></p>
     <p class="live-stats" id="live-count"></p>
@@ -1034,9 +1075,29 @@ const SCORE = {
    Colle ici l'URL de ton application Web Apps Script (elle se
    termine par /exec). Laisse "" pour jouer sans classement.
    ========================================================= */
+/* =========================================================
+   2 ter. ÉVÉNEMENTS
+   Choisir l'événement : changer EVENEMENT_ACTIF, ou ajouter au lien
+   ?evenement=ludovia (ou ?classe=LUDOVIA). Pour un nouvel événement,
+   copier une ligne et changer code (classement), nom et suite.
+   suite: "synonymes" = page « Étape suivante » vers Minecraft Education
+   (null = pas de page). accueil = lien de retour (ou "").
+   ========================================================= */
+const EVENEMENTS = {
+  ludovia:      { code: "LUDOVIA",      nom: "Ludovia",              suite: null,        accueil: "" },
+  startechdays: { code: "STARTECHDAYS", nom: "StarTechs Days 2026",  suite: "synonymes", accueil: "https://ludo1104-rp.github.io/startechdays-2026/" }
+};
+const EVENEMENT_ACTIF = "startechdays";
+const EVENEMENT = (() => {
+  const q = new URLSearchParams(location.search);
+  const id = String(q.get("evenement") || "").toLowerCase();
+  if (EVENEMENTS[id]) return EVENEMENTS[id];
+  const c = String(q.get("classe") || "").toUpperCase();
+  return Object.values(EVENEMENTS).find(e => e.code === c) || EVENEMENTS[EVENEMENT_ACTIF];
+})();
 const CLASSEMENT = {
   url: "https://script.google.com/macros/s/AKfycby91wj74TW4mML_GZBiP5WUOYT5JYXOG0wa2NndwH3jU5fNRCg_90q4iSZfHG-2N4r6/exec",
-  classeParDefaut: "LUDOVIA",
+  classeParDefaut: EVENEMENT.code,
   taille: 10,            // nombre de joueurs affichés en fin de partie
   tailleTableau: 15,     // nombre de joueurs affichés sur l'écran du TBI
   rafraichissement: 5    // secondes entre deux mises à jour de l'écran du TBI
@@ -1419,7 +1480,7 @@ const reduceMq = window.matchMedia ? window.matchMedia("(prefers-reduced-motion:
 const reduceMotion = () => !!(reduceMq && reduceMq.matches);
 const fmt = n => { try { return n.toLocaleString("fr-BE"); } catch (e) { return String(n); } };
 
-const screens = { intro: $("screen-intro"), start: $("screen-start"), game: $("screen-game"), end: $("screen-end"), board: $("screen-board") };
+const screens = { intro: $("screen-intro"), start: $("screen-start"), game: $("screen-game"), end: $("screen-end"), board: $("screen-board"), next: $("screen-next") };
 const ui = {
   counter: $("q-counter"), progress: $("progress"), progressFill: $("progress-fill"),
   score: $("score"), scorebox: $("scorebox"), streak: $("streak"),
@@ -2111,11 +2172,30 @@ function endIntro() {
   show("start");
 }
 
+/* ----- Événement : bandeau, page « Étape suivante » ----- */
+function setupEvenement() {
+  const b = $("event-badge");
+  b.textContent = EVENEMENT.nom; b.hidden = false;
+  document.title = "Minecraft Discovery — " + EVENEMENT.nom;
+  if (!EVENEMENT.suite) return;
+  const next = $("btn-next");
+  next.hidden = false;
+  next.addEventListener("click", () => { Sound.click(); showNext(); });
+  $("btn-next-back").addEventListener("click", () => { Sound.click(); show("end"); });
+  if (EVENEMENT.accueil) { const h = $("btn-next-home"); h.href = EVENEMENT.accueil; h.hidden = false; }
+}
+function showNext() {
+  try { const w = buildWorld($("world-next")); setSky(w, 1); w.beacon.style.setProperty("--glow", 1); w.beam.classList.add("lit"); } catch (e) { /* décor facultatif */ }
+  show("next");
+  $("next-title").focus({ preventScroll: true });
+}
+
 /* ----- Initialisation ----- */
 function init() {
   try { buildTextures(); } catch (e) { /* le jeu reste jouable avec les couleurs de secours */ }
   const params = HOTE.params;
   if (params.get("classe")) player.classe = normClasse(params.get("classe"));
+  $("live-eyebrow").textContent = "Minecraft Discovery · " + EVENEMENT.nom;
   if (params.has("tableau")) { startBoardMode(); return; }
   buildAnswerButtons();
   $("btn-lu").addEventListener("click", () => { Sound.click(); revealAnswers(); });
@@ -2134,6 +2214,7 @@ function init() {
 
   $("btn-start").addEventListener("click", () => { Sound.click(); if (Online.actif()) openSetup(); else startGame(); });
   $("btn-replay").addEventListener("click", startGame);
+  setupEvenement();
   $("btn-replay-2").addEventListener("click", startGame);
   $("btn-restart").addEventListener("click", () => {
     if (window.confirm("Recommencer la partie depuis le début ?")) startGame();
