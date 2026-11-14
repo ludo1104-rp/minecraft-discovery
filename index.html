@@ -1807,9 +1807,14 @@ function endGame() {
 /* =========================================================
    7. CLASSEMENT EN LIGNE
    ========================================================= */
+/* Stand (« ?evenement=… » ou « ?stand ») : le pseudo reste en mémoire vive seulement.
+   Recharger la page = nouveau joueur, sans le pseudo du précédent. */
+const SANS_MEMOIRE = /[?&](evenement|stand)(=|&|$)/.test(location.search);
+const memoireVive = {};
+if (SANS_MEMOIRE) { try { window.localStorage.removeItem("md-pseudo"); } catch (e) {} }
 const store = {
-  get(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
+  get(k) { if (SANS_MEMOIRE) return memoireVive[k] ?? null; try { return window.localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { if (SANS_MEMOIRE) { memoireVive[k] = v; return; } try { window.localStorage.setItem(k, v); } catch (e) { /* stockage indisponible */ } }
 };
 const player = { pseudo: "", classe: CLASSEMENT.classeParDefaut, classeFixe: false, choix: [] };
 /* Paramètres d'adresse : ceux de la page, ou ceux transmis par Google Apps Script */
